@@ -1,7 +1,11 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Loader2, CheckCircle, AlertCircle, RotateCcw, Camera, X } from 'lucide-react';
 import { api } from '../api/palmPayApi';
+// @ts-ignore
+import { Hands } from '@mediapipe/hands';
+// @ts-ignore
+import { drawConnectors, drawLandmarks } from '@mediapipe/drawing_utils';
 
 const INSPECTION_TIME = 4000; // ms
 
@@ -11,6 +15,7 @@ interface HandScanRegisterProps {
 
 const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const [scanning, setScanning] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState('');
@@ -19,6 +24,8 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
   const [handData, setHandData] = useState('');
   const [cameraReady, setCameraReady] = useState(false);
   const [captureStarted, setCaptureStarted] = useState(false);
+  const [handInRegion, setHandInRegion] = useState(false);
+  const [landmarks, setLandmarks] = useState<any[]>([]);
 
   // Start camera
   const startCamera = async () => {
@@ -44,13 +51,94 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
     setCameraReady(false);
   };
 
+  // Hand detection setup
+  useEffect(() => {
+    let hands: any;
+    let animationId: number;
+    let video: HTMLVideoElement | null = null;
+    let canvas: HTMLCanvasElement | null = null;
+    let ctx: CanvasRenderingContext2D | null = null;
+
+    const setupHandDetection = async () => {
+      // @ts-ignore
+      const HandsModule = (await import('@mediapipe/hands')).Hands;
+      hands = new HandsModule({
+        locateFile: (file: string) =>
+          `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
+      });
+      hands.setOptions({
+        maxNumHands: 1,
+        modelComplexity: 1,
+        minDetectionConfidence: 0.7,
+        minTrackingConfidence: 0.7,
+      });
+      hands.onResults(onResults);
+
+      video = videoRef.current;
+      canvas = canvasRef.current;
+      if (!video || !canvas) return;
+      ctx = canvas.getContext('2d');
+
+      const detect = async () => {
+        if (video && video.readyState === 4) {
+          await hands.send({ image: video });
+        }
+        animationId = requestAnimationFrame(detect);
+      };
+      detect();
+    };
+
+    const onResults = (results: any) => {
+      if (!canvasRef.current || !videoRef.current) return;
+      const ctx = canvasRef.current.getContext('2d');
+      ctx?.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+      if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+        const handLandmarks = results.multiHandLandmarks[0];
+        setLandmarks(handLandmarks);
+        // Draw landmarks and connectors
+        drawConnectors(ctx, handLandmarks, Hands.HAND_CONNECTIONS, { color: '#00FFAA', lineWidth: 4 });
+        drawLandmarks(ctx, handLandmarks, { color: '#00FFAA', lineWidth: 2 });
+        // Check if all points are within the central region
+        const confined = handLandmarks.every((pt: any) =>
+          pt.x > 0.1 && pt.x < 0.9 && pt.y > 0.1 && pt.y < 0.9
+        );
+        setHandInRegion(confined);
+        // Draw border
+        ctx.save();
+        ctx.strokeStyle = confined ? '#00FFAA' : '#FF4444';
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        handLandmarks.forEach((pt: any, i: number) => {
+          const x = pt.x * canvasRef.current!.width;
+          const y = pt.y * canvasRef.current!.height;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.closePath();
+        ctx.stroke();
+        ctx.restore();
+      } else {
+        setLandmarks([]);
+        setHandInRegion(false);
+      }
+    };
+
+    if (cameraReady) {
+      setupHandDetection();
+    }
+    return () => {
+      if (animationId) cancelAnimationFrame(animationId);
+      if (hands && hands.close) hands.close();
+    };
+    // eslint-disable-next-line
+  }, [cameraReady]);
+
   // Simulate hand detection and start capture
   const handleStartCapture = () => {
     setCaptureStarted(true);
     setError('');
     setProgress(0);
     setScanning(true);
-    // Start the inspection timeline
     let elapsed = 0;
     const interval = 100;
     const timer = setInterval(() => {
@@ -58,8 +146,15 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
       setProgress(Math.min(100, (elapsed / INSPECTION_TIME) * 100));
       if (elapsed >= INSPECTION_TIME) {
         clearInterval(timer);
+        if (!handInRegion) {
+          setError('Please keep your hand inside the border.');
+          setScanning(false);
+          setCaptureStarted(false);
+          stopCamera();
+          return;
+        }
         // Simulate image quality check (random fail for 'too dark' or 'blurry')
-        const isQualityGood = Math.random() > 0.15; // 85% chance of good quality
+        const isQualityGood = Math.random() > 0.15;
         if (!isQualityGood) {
           setError('Image quality is too low (too dark or blurry). Please try again.');
           setScanning(false);
@@ -114,13 +209,13 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
   };
 
   // Remove scrollbar from overlay
-  React.useEffect(() => {
+  useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = ''; };
   }, []);
 
   // Start camera on mount
-  React.useEffect(() => {
+  useEffect(() => {
     startCamera();
     return () => stopCamera();
     // eslint-disable-next-line
@@ -154,7 +249,8 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
           <>
             <div className="flex flex-col items-center mb-10">
               <div className="relative rounded-3xl overflow-hidden border-4 border-neon-green shadow-xl bg-black w-[480px] h-[360px] flex items-center justify-center">
-                <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
+                <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover absolute top-0 left-0" />
+                <canvas ref={canvasRef} width={480} height={360} className="absolute top-0 left-0 w-full h-full pointer-events-none" />
                 {!captureStarted && cameraReady && !scanning && (
                   <button
                     onClick={handleStartCapture}
