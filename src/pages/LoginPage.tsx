@@ -16,6 +16,8 @@ const LoginPage = () => {
       const data = await login(email, password);
       if (data.session) {
         localStorage.setItem('session', JSON.stringify(data.session));
+      } else if (data.token) {
+        localStorage.setItem('session', JSON.stringify(data.token));
       } else {
         localStorage.removeItem('session');
       }
