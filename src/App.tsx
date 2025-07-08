@@ -12,6 +12,7 @@ import UserDashboard from './pages/UserDashboard';
 import StoreDashboard from './pages/StoreDashboard';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import { useEffect } from 'react';
 
 function RequireAuth({ children }: { children: JSX.Element }) {
   const location = useLocation();
@@ -35,6 +36,16 @@ const pageTransition = {
 };
 
 function App() {
+  useEffect(() => {
+    // Clean up bad localStorage values on startup
+    const badValues = ['undefined', 'null'];
+    ['user', 'session'].forEach((key) => {
+      const val = localStorage.getItem(key);
+      if (badValues.includes(val)) {
+        localStorage.removeItem(key);
+      }
+    });
+  }, []);
   return (
     <Router>
       <div className="min-h-screen bg-tech-blue font-space font-light">

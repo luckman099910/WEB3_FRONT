@@ -14,8 +14,16 @@ const LoginPage = () => {
     setError('');
     try {
       const data = await login(email, password);
-      localStorage.setItem('session', JSON.stringify(data.session));
-      localStorage.setItem('user', JSON.stringify(data.user));
+      if (data.session) {
+        localStorage.setItem('session', JSON.stringify(data.session));
+      } else {
+        localStorage.removeItem('session');
+      }
+      if (data.user) {
+        localStorage.setItem('user', JSON.stringify(data.user));
+      } else {
+        localStorage.removeItem('user');
+      }
       navigate('/user-dashboard');
     } catch (err: any) {
       setError(err.message);
