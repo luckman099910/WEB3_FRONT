@@ -132,10 +132,12 @@ const HomePage = () => {
                   <span>Try Demo</span>
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </Link>
-                <button className="flex items-center space-x-2 px-8 py-4 rounded-full glass-effect text-white hover:bg-white/10 hover:border-neon-green/50 transition-all duration-300"
+                <Link
+                  to="/applicants-register"
+                  className="flex items-center space-x-2 px-8 py-4 rounded-full glass-effect text-white hover:bg-white/10 hover:border-neon-green/50 transition-all duration-300"
                 >
                   <span>Join Waitlist</span>
-                </button>
+                </Link>
               </div>
             </motion.div>
           </div>

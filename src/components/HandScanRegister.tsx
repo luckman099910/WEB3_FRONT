@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, CheckCircle, AlertCircle, RotateCcw, Camera, X } from 'lucide-react';
 import { api } from '../api/palmPayApi';
 import { safeJsonParse } from '../api/palmPayApi';
@@ -9,6 +9,13 @@ import { Hands } from '@mediapipe/hands';
 import { drawConnectors, drawLandmarks } from '@mediapipe/drawing_utils';
 
 const INSPECTION_TIME = 4000; // ms
+const FRAME_COLOR = '#00FFAA';
+const FRAME_LINE_WIDTH = 4;
+const DOT_COLOR = '#00FFAA';
+const DOT_RADIUS = 6;
+const SCAN_LINE_COLOR = '#00FFAA';
+const SCAN_LINE_WIDTH = 3;
+const FRAME_ANIMATION_DURATION = 500; // ms
 
 interface HandScanRegisterProps {
   onCancel?: () => void;
@@ -27,6 +34,10 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
   const [captureStarted, setCaptureStarted] = useState(false);
   const [handInRegion, setHandInRegion] = useState(false);
   const [landmarks, setLandmarks] = useState<any[]>([]);
+  // Add scanning line animation state
+  const [scanLineY, setScanLineY] = useState(0);
+  const [frameColor, setFrameColor] = useState(FRAME_COLOR);
+  const [framePulse, setFramePulse] = useState(false);
 
   // Start camera
   const startCamera = async () => {
@@ -59,6 +70,48 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
     let video: HTMLVideoElement | null = null;
     let canvas: HTMLCanvasElement | null = null;
     let ctx: CanvasRenderingContext2D | null = null;
+    let scanLineAnimId: number;
+
+    // Helper to draw the neon frame (update to use frameColor and pulse)
+    function drawFrame(ctx: CanvasRenderingContext2D, width: number, height: number) {
+      ctx.save();
+      ctx.strokeStyle = frameColor;
+      ctx.shadowColor = frameColor;
+      ctx.shadowBlur = framePulse ? 32 : 16;
+      ctx.lineWidth = FRAME_LINE_WIDTH + (framePulse ? 4 : 0);
+      ctx.strokeRect(40, 40, width - 80, height - 80);
+      ctx.restore();
+    }
+
+    // Helper to draw hand landmarks as dots
+    function drawLandmarkDots(ctx: CanvasRenderingContext2D, handLandmarks: any[]) {
+      ctx.save();
+      ctx.fillStyle = DOT_COLOR;
+      ctx.shadowColor = DOT_COLOR;
+      ctx.shadowBlur = 12;
+      handLandmarks.forEach(pt => {
+        const x = pt.x * ctx.canvas.width;
+        const y = pt.y * ctx.canvas.height;
+        ctx.beginPath();
+        ctx.arc(x, y, DOT_RADIUS, 0, 2 * Math.PI);
+        ctx.fill();
+      });
+      ctx.restore();
+    }
+
+    // Helper to draw scanning line
+    function drawScanLine(ctx: CanvasRenderingContext2D, y: number, width: number) {
+      ctx.save();
+      ctx.strokeStyle = SCAN_LINE_COLOR;
+      ctx.shadowColor = SCAN_LINE_COLOR;
+      ctx.shadowBlur = 16;
+      ctx.lineWidth = SCAN_LINE_WIDTH;
+      ctx.beginPath();
+      ctx.moveTo(40, y);
+      ctx.lineTo(width - 40, y);
+      ctx.stroke();
+      ctx.restore();
+    }
 
     const setupHandDetection = async () => {
       // @ts-ignore
@@ -93,36 +146,49 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
       if (!canvasRef.current || !videoRef.current) return;
       const ctx = canvasRef.current.getContext('2d');
       ctx?.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+      // Always draw the neon frame
+      drawFrame(ctx, canvasRef.current.width, canvasRef.current.height);
       if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
         const handLandmarks = results.multiHandLandmarks[0];
         setLandmarks(handLandmarks);
-        // Draw landmarks and connectors
-        drawConnectors(ctx, handLandmarks, Hands.HAND_CONNECTIONS, { color: '#00FFAA', lineWidth: 4 });
-        drawLandmarks(ctx, handLandmarks, { color: '#00FFAA', lineWidth: 2 });
+        // Draw landmarks and connectors (optional, can comment out for just dots)
+        // drawConnectors(ctx, handLandmarks, Hands.HAND_CONNECTIONS, { color: '#00FFAA', lineWidth: 4 });
+        // drawLandmarks(ctx, handLandmarks, { color: '#00FFAA', lineWidth: 2 });
+        // Draw glowing dots for each landmark
+        drawLandmarkDots(ctx, handLandmarks);
         // Check if all points are within the central region
         const confined = handLandmarks.every((pt: any) =>
           pt.x > 0.1 && pt.x < 0.9 && pt.y > 0.1 && pt.y < 0.9
         );
         setHandInRegion(confined);
-        // Draw border
-        ctx.save();
-        ctx.strokeStyle = confined ? '#00FFAA' : '#FF4444';
-        ctx.lineWidth = 6;
-        ctx.beginPath();
-        handLandmarks.forEach((pt: any, i: number) => {
-          const x = pt.x * canvasRef.current!.width;
-          const y = pt.y * canvasRef.current!.height;
-          if (i === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
-        });
-        ctx.closePath();
-        ctx.stroke();
-        ctx.restore();
+        // If scanning and hand is in region, draw scanning line
+        if (scanning && confined) {
+          drawScanLine(ctx, scanLineY, canvasRef.current.width);
+        }
       } else {
         setLandmarks([]);
         setHandInRegion(false);
       }
     };
+
+    // Animate scanning line when scanning and hand is in region
+    useEffect(() => {
+      if (scanning && handInRegion && canvasRef.current) {
+        let y = 50;
+        let direction = 1;
+        function animate() {
+          setScanLineY(y);
+          y += direction * 4;
+          if (y > canvasRef.current!.height - 50) direction = -1;
+          if (y < 50) direction = 1;
+          scanLineAnimId = requestAnimationFrame(animate);
+        }
+        animate();
+        return () => cancelAnimationFrame(scanLineAnimId);
+      } else {
+        setScanLineY(0);
+      }
+    }, [scanning, handInRegion]);
 
     if (cameraReady) {
       setupHandDetection();
@@ -133,6 +199,36 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
     };
     // eslint-disable-next-line
   }, [cameraReady]);
+
+  // Animate frame color based on handInRegion
+  useEffect(() => {
+    let colorAnimId: number;
+    let t = 0;
+    if (!success) {
+      function animateColor() {
+        if (handInRegion) {
+          setFrameColor(FRAME_COLOR);
+        } else {
+          // Animate between neon green and red
+          t += 0.05;
+          const r = Math.round(255 * Math.abs(Math.sin(t)));
+          setFrameColor(`rgb(${r},255,170)`); // animate between red and green
+        }
+        colorAnimId = requestAnimationFrame(animateColor);
+      }
+      animateColor();
+      return () => cancelAnimationFrame(colorAnimId);
+    }
+  }, [handInRegion, success]);
+
+  // Pulse effect on success
+  useEffect(() => {
+    if (success) {
+      setFramePulse(true);
+      const timeout = setTimeout(() => setFramePulse(false), 1200);
+      return () => clearTimeout(timeout);
+    }
+  }, [success]);
 
   // Simulate hand detection and start capture
   const handleStartCapture = () => {

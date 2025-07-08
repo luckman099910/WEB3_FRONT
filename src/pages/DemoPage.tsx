@@ -18,6 +18,7 @@ import {
   Eye,
   Fingerprint
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const DemoPage = () => {
   const [currentStep, setCurrentStep] = useState(0);
@@ -394,10 +395,13 @@ const DemoPage = () => {
               Join the waitlist to be among the first to use palm-based payments.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button className="flex items-center space-x-2 px-8 py-4 rounded-full bg-gradient-to-r from-neon-green to-sky-blue text-tech-blue font-normal hover:neon-glow transition-all duration-300 group animate-glow">
+              <Link
+                to="/applicants-register"
+                className="flex items-center space-x-2 px-8 py-4 rounded-full bg-gradient-to-r from-neon-green to-sky-blue text-tech-blue font-normal hover:neon-glow transition-all duration-300 group animate-glow"
+              >
                 <span>Join Waitlist</span>
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </button>
+              </Link>
               <button className="px-8 py-4 rounded-full glass-effect text-white hover:bg-white/10 hover:border-neon-green/50 transition-all duration-300">
                 Learn More
               </button>

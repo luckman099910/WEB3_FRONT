@@ -12,6 +12,7 @@ import UserDashboard from './pages/UserDashboard';
 import StoreDashboard from './pages/StoreDashboard';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import ApplicantsRegisterPage from './pages/ApplicantsRegisterPage';
 import { useEffect } from 'react';
 
 function RequireAuth({ children }: { children: JSX.Element }) {
@@ -154,6 +155,18 @@ function App() {
               } />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
+              <Route path="/applicants-register" element={
+                <motion.div
+                  key="applicants-register"
+                  initial="initial"
+                  animate="in"
+                  exit="out"
+                  variants={pageVariants}
+                  transition={pageTransition}
+                >
+                  <ApplicantsRegisterPage />
+                </motion.div>
+              } />
             </Routes>
           </AnimatePresence>
         </Layout>
