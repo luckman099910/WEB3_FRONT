@@ -18,12 +18,13 @@ import {
   Eye,
   Fingerprint
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 const DemoPage = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [showTooltip, setShowTooltip] = useState<number | null>(null);
+  const navigate = useNavigate();
 
   const demoSteps = [
     {
@@ -151,7 +152,7 @@ const DemoPage = () => {
           >
             <div className="flex justify-center space-x-4 mb-8">
               <button
-                onClick={startDemo}
+                onClick={() => navigate('/palm-register')}
                 disabled={isPlaying}
                 className="flex items-center space-x-2 px-8 py-4 rounded-full bg-gradient-to-r from-neon-green to-sky-blue text-tech-blue font-normal hover:neon-glow transition-all duration-300 group disabled:opacity-50"
               >
@@ -181,6 +182,8 @@ const DemoPage = () => {
                     ? 'border-neon-green/50 neon-glow' 
                     : 'border-white/10'
                 } ${currentStep === index ? 'scale-105' : ''}`}
+                onClick={index === 0 ? () => navigate('/palm-register') : undefined}
+                style={index === 0 ? { cursor: 'pointer' } : {}}
               >
                 {/* Step Number */}
                 <div className="absolute -top-3 -left-3 w-8 h-8 rounded-full bg-gradient-to-r from-neon-green to-sky-blue flex items-center justify-center text-tech-blue font-normal text-sm">
@@ -286,7 +289,9 @@ const DemoPage = () => {
                 </div>
               </div>
 
-              <button className="flex items-center space-x-2 px-8 py-4 rounded-full bg-gradient-to-r from-neon-green to-sky-blue text-tech-blue font-normal hover:neon-glow transition-all duration-300 group mx-auto">
+              <button className="flex items-center space-x-2 px-8 py-4 rounded-full bg-gradient-to-r from-neon-green to-sky-blue text-tech-blue font-normal hover:neon-glow transition-all duration-300 group mx-auto"
+                onClick={() => navigate('/palm-register')}
+              >
                 <Scan className="w-5 h-5" />
                 <span>Simulate Scan</span>
               </button>

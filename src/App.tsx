@@ -13,6 +13,7 @@ import StoreDashboard from './pages/StoreDashboard';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ApplicantsRegisterPage from './pages/ApplicantsRegisterPage';
+import PalmRegisterPage from './pages/PalmRegisterPage';
 import { useEffect } from 'react';
 
 function RequireAuth({ children }: { children: JSX.Element }) {
@@ -165,6 +166,18 @@ function App() {
                   transition={pageTransition}
                 >
                   <ApplicantsRegisterPage />
+                </motion.div>
+              } />
+              <Route path="/palm-register" element={
+                <motion.div
+                  key="palm-register"
+                  initial="initial"
+                  animate="in"
+                  exit="out"
+                  variants={pageVariants}
+                  transition={pageTransition}
+                >
+                  <PalmRegisterPage />
                 </motion.div>
               } />
             </Routes>

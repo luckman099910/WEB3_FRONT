@@ -24,6 +24,7 @@ import {
 import { api, safeJsonParse } from '../api/palmPayApi';
 import PalmRegistration from '../components/PalmRegistration';
 import HandScanRegister from '../components/HandScanRegister';
+import { useNavigate } from 'react-router-dom';
 
 const UserDashboard = () => {
   const [activeTab, setActiveTab] = useState('wallet');
@@ -35,6 +36,8 @@ const UserDashboard = () => {
 
   // Mock user ID for demo - in real app this would come from auth
   const userId = 'demo-user-id';
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     loadUserDashboard();
@@ -190,7 +193,7 @@ const UserDashboard = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <button 
                     className="flex items-center gap-2 px-6 py-4 rounded-2xl bg-gradient-to-r from-fintech-green to-electric-blue text-white font-medium shadow-lg hover:scale-[1.02] transition-transform duration-200"
-                    onClick={() => setShowRegistration(true)}
+                    onClick={() => navigate('/palm-register')}
                   >
                     <Hand className="w-5 h-5" />
                     Register Palm

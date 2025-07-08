@@ -63,6 +63,43 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
     setCameraReady(false);
   };
 
+  // Cancel handler (restored)
+  const handleCancel = () => {
+    stopCamera();
+    setScanning(false);
+    setProgress(0);
+    setError('');
+    setSuccess(false);
+    setHandData('');
+    setCaptureStarted(false);
+    setHandInRegion(false);
+    setLandmarks([]);
+    setScanLineY(0);
+    setFrameColor(FRAME_COLOR);
+    setFramePulse(false);
+    if (onCancel) onCancel();
+  };
+
+  // Animate scanning line when scanning and hand is in region
+  useEffect(() => {
+    let scanLineAnimId: number;
+    if (scanning && handInRegion && canvasRef.current) {
+      let y = 50;
+      let direction = 1;
+      function animate() {
+        setScanLineY(y);
+        y += direction * 4;
+        if (y > canvasRef.current!.height - 50) direction = -1;
+        if (y < 50) direction = 1;
+        scanLineAnimId = requestAnimationFrame(animate);
+      }
+      animate();
+      return () => cancelAnimationFrame(scanLineAnimId);
+    } else {
+      setScanLineY(0);
+    }
+  }, [scanning, handInRegion]);
+
   // Hand detection setup
   useEffect(() => {
     let hands: any;
@@ -70,7 +107,6 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
     let video: HTMLVideoElement | null = null;
     let canvas: HTMLCanvasElement | null = null;
     let ctx: CanvasRenderingContext2D | null = null;
-    let scanLineAnimId: number;
 
     // Helper to draw the neon frame (update to use frameColor and pulse)
     function drawFrame(ctx: CanvasRenderingContext2D, width: number, height: number) {
@@ -80,6 +116,14 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
       ctx.shadowBlur = framePulse ? 32 : 16;
       ctx.lineWidth = FRAME_LINE_WIDTH + (framePulse ? 4 : 0);
       ctx.strokeRect(40, 40, width - 80, height - 80);
+      ctx.restore();
+      // Draw red hand scan border (fixed margin inside neon frame)
+      ctx.save();
+      ctx.strokeStyle = 'red';
+      ctx.shadowColor = 'red';
+      ctx.shadowBlur = 0;
+      ctx.lineWidth = 3;
+      ctx.strokeRect(70, 70, width - 140, height - 140);
       ctx.restore();
     }
 
@@ -171,25 +215,6 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
       }
     };
 
-    // Animate scanning line when scanning and hand is in region
-    useEffect(() => {
-      if (scanning && handInRegion && canvasRef.current) {
-        let y = 50;
-        let direction = 1;
-        function animate() {
-          setScanLineY(y);
-          y += direction * 4;
-          if (y > canvasRef.current!.height - 50) direction = -1;
-          if (y < 50) direction = 1;
-          scanLineAnimId = requestAnimationFrame(animate);
-        }
-        animate();
-        return () => cancelAnimationFrame(scanLineAnimId);
-      } else {
-        setScanLineY(0);
-      }
-    }, [scanning, handInRegion]);
-
     if (cameraReady) {
       setupHandDetection();
     }
@@ -198,7 +223,7 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
       if (hands && hands.close) hands.close();
     };
     // eslint-disable-next-line
-  }, [cameraReady]);
+  }, [cameraReady, frameColor, framePulse, scanLineY, scanning]);
 
   // Animate frame color based on handInRegion
   useEffect(() => {
@@ -311,7 +336,7 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
     return () => { document.body.style.overflow = ''; };
   }, []);
 
-  // Start camera on mount
+  // Start camera on mount and clean up on unmount
   useEffect(() => {
     startCamera();
     return () => stopCamera();
@@ -319,9 +344,10 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
   }, []);
 
   return (
-    <motion.div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
+    <div className="w-full flex justify-center items-center min-h-[70vh]">
       <div className="p-12 rounded-3xl bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl border border-white/20 max-w-2xl w-full flex flex-col items-center shadow-2xl">
         <h2 className="text-4xl font-light text-primary mb-10 text-center">Palm Registration</h2>
+        {/* Registration UI always shown */}
         {error && (
           <div className="mb-6 text-red-500 flex items-center gap-2 justify-center text-lg"><AlertCircle /> {error}</div>
         )}
@@ -333,14 +359,6 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
             <h3 className="text-2xl font-ultralight text-white mb-4">Registration Complete!</h3>
             <p className="text-white/70 font-ultralight mb-8 text-lg">Your palm scan has been registered and securely stored.</p>
             <div className="text-sm text-white/40 break-all text-center">Hand Data: {handData}</div>
-            {onCancel && (
-              <button
-                onClick={onCancel}
-                className="w-full px-8 py-4 rounded-full bg-white/20 text-white font-medium flex items-center justify-center gap-2 text-lg mt-8 border border-white/30 hover:bg-white/30 transition"
-              >
-                <X className="w-6 h-6" /> Close
-              </button>
-            )}
           </div>
         ) : (
           <>
@@ -369,27 +387,25 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
                   style={{ width: `${progress}%` }}
                 />
               </div>
-              {scanning && <div className="text-white/60 text-base mt-4 text-center">Inspecting... Please hold your hand steady inside the border</div>}
             </div>
-            <button
-              onClick={handleRescan}
-              className="w-full px-8 py-4 rounded-full bg-gradient-to-r from-sky-500 to-blue-600 text-white font-medium flex items-center justify-center gap-2 text-lg mb-2"
-              style={{ display: error && !success ? 'flex' : 'none' }}
-            >
-              <RotateCcw className="w-6 h-6" /> Rescan
-            </button>
-            {onCancel && (
-              <button
-                onClick={onCancel}
-                className="w-full px-8 py-4 rounded-full bg-white/20 text-white font-medium flex items-center justify-center gap-2 text-lg mt-2 border border-white/30 hover:bg-white/30 transition"
-              >
-                <X className="w-6 h-6" /> Cancel
-              </button>
-            )}
+                <div className="flex flex-row gap-4 w-full mt-4">
+                  <button
+                    onClick={handleRescan}
+                    className="flex-1 px-8 py-4 rounded-full bg-gradient-to-r from-blue-400 to-blue-600 text-white font-medium flex items-center justify-center gap-2 text-lg border border-white/30 hover:bg-blue-700 transition"
+                  >
+                    <RotateCcw className="w-6 h-6" /> Rescan
+                  </button>
+                  <button
+                    onClick={handleCancel}
+                    className="flex-1 px-8 py-4 rounded-full border-2 border-red-500 text-red-500 font-medium flex items-center justify-center gap-2 text-lg bg-transparent hover:bg-red-500 hover:text-white transition"
+                  >
+                    <X className="w-6 h-6" /> Cancel
+                  </button>
+                </div>
           </>
         )}
       </div>
-    </motion.div>
+    </div>
   );
 };
 
