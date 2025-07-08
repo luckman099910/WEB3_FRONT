@@ -68,13 +68,13 @@ const Navbar = () => {
                 </button>
               </>
             ) : (
-              <Link
-                to="/user-dashboard"
-                className="flex items-center space-x-2 px-6 py-3 rounded-full btn-primary group animate-glow"
-              >
-                <Rocket className="w-4 h-4 group-hover:rotate-12 transition-transform" />
-                <span>Launch App</span>
-              </Link>
+            <Link
+              to="/user-dashboard"
+              className="flex items-center space-x-2 px-6 py-3 rounded-full btn-primary group animate-glow"
+            >
+              <Rocket className="w-4 h-4 group-hover:rotate-12 transition-transform" />
+              <span>Launch App</span>
+            </Link>
             )}
           </div>
 
@@ -129,14 +129,14 @@ const Navbar = () => {
                 </button>
               </>
             ) : (
-              <Link
-                to="/user-dashboard"
-                onClick={() => setIsOpen(false)}
-                className="flex items-center space-x-2 px-6 py-3 rounded-full btn-primary group w-fit animate-glow"
-              >
-                <Rocket className="w-4 h-4 group-hover:rotate-12 transition-transform" />
-                <span>Launch App</span>
-              </Link>
+            <Link
+              to="/user-dashboard"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center space-x-2 px-6 py-3 rounded-full btn-primary group w-fit animate-glow"
+            >
+              <Rocket className="w-4 h-4 group-hover:rotate-12 transition-transform" />
+              <span>Launch App</span>
+            </Link>
             )}
           </div>
         </motion.div>
