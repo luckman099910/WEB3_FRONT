@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import { api } from '../api/palmPayApi';
 
 interface TransactionProcessorProps {
   merchantId: string;
@@ -21,13 +22,9 @@ const TransactionProcessor: React.FC<TransactionProcessorProps> = ({ merchantId,
     setSuccess(false);
     setLoading(true);
     try {
-      const res = await fetch("/api/transaction", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ merchantId, amount: Number(amount), hash })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Transaction failed");
+      const res = await api.post('/api/transaction', { merchantId, amount: Number(amount), hash });
+      const data = res.data;
+      if (res.status !== 200) throw new Error(data.message || "Transaction failed");
       setSuccess(true);
       if (onSuccess) onSuccess(data);
     } catch (err: any) {

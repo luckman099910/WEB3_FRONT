@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Wifi, WifiOff, Database, Server, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { api } from '../api/palmPayApi';
 
 interface ConnectionStatusProps {
   className?: string;
@@ -38,10 +39,9 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({ className = '' }) =
   const checkConnections = async () => {
     // Check Backend API
     try {
-      const response = await fetch('http://localhost:3000/api/health');
-      if (response.ok) {
-        const data = await response.json();
-        updateStatus(0, 'connected', `Connected (${data.status})`);
+      const response = await api.get('/api/health');
+      if (response.data.ok) {
+        updateStatus(0, 'connected', `Connected (${response.data.status})`);
       } else {
         updateStatus(0, 'error', 'Not responding');
       }
@@ -51,8 +51,8 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({ className = '' }) =
 
     // Check Supabase through backend
     try {
-      const response = await fetch('http://localhost:3000/api/dashboard/test');
-      if (response.ok) {
+      const response = await api.get('/api/dashboard/test');
+      if (response.data.ok) {
         updateStatus(1, 'connected', 'Connected');
       } else {
         updateStatus(1, 'error', 'Database error');
