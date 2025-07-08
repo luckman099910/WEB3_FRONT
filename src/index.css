@@ -4,6 +4,15 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Hide vertical scrollbar unless content overflows */
+html, body {
+  overflow-y: auto;
+  scrollbar-width: none; /* Firefox */
+}
+html::-webkit-scrollbar, body::-webkit-scrollbar {
+  display: none; /* Chrome, Safari */
+}
+
 @layer base {
   body {
     font-family: 'Space Grotesk', 'Outfit', sans-serif;
