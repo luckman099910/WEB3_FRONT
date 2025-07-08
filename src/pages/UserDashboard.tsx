@@ -21,7 +21,7 @@ import {
   UserPlus,
   AlertCircle
 } from 'lucide-react';
-// import { getDashboard } from '../api/palmPayApi';
+import { api } from '../api/palmPayApi';
 import PalmRegistration from '../components/PalmRegistration';
 import HandScanRegister from '../components/HandScanRegister';
 
@@ -43,25 +43,10 @@ const UserDashboard = () => {
   const loadUserDashboard = async () => {
     try {
       setLoading(true);
-      // const data = await getDashboard(userId);
-      // setUserData(data);
-      // Mock data for now
-      setUserData({
-        user: {
-          balance: 123456.78,
-          transactions: [
-            { txid: 'txn1234567890abcdef1234567890abcdef', amount: 1000, created_at: '2023-10-27T10:00:00Z' },
-            { txid: 'txn1234567890abcdef1234567890abcdef', amount: -500, created_at: '2023-10-27T09:30:00Z' },
-            { txid: 'txn1234567890abcdef1234567890abcdef', amount: 200, created_at: '2023-10-27T09:00:00Z' },
-          ]
-        },
-        transactions: [
-          { id: 1, type: 'payment', merchant: 'Starbucks Coffee', amount: -450, time: '2 hours ago', status: 'completed' },
-          { id: 2, type: 'received', merchant: 'Salary Credit', amount: 75000, time: '1 day ago', status: 'completed' },
-          { id: 3, type: 'payment', merchant: 'Amazon Shopping', amount: -1250, time: '2 days ago', status: 'completed' },
-          { id: 4, type: 'payment', merchant: 'Uber Ride', amount: -280, time: '3 days ago', status: 'completed' },
-        ]
-      });
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      if (!user || !user.id) throw new Error('User not logged in');
+      const res = await api.get(`/api/dashboard`, { params: { userId: user.id } });
+      setUserData(res.data);
     } catch (err: any) {
       setError(err.message || 'Failed to load dashboard');
     } finally {
@@ -253,6 +238,7 @@ const UserDashboard = () => {
         );
 
       case 'history':
+        const history = Array.isArray(userData?.user_history) ? userData.user_history : [];
         return (
           <div className="space-y-6">
             <motion.div
@@ -262,25 +248,27 @@ const UserDashboard = () => {
               className="p-6 rounded-3xl bg-white/5 backdrop-blur-xl border border-white/10"
             >
               <h3 className="text-xl font-ultralight text-white mb-4">Transaction History</h3>
-              <div className="space-y-3">
-                {transactions.map((transaction) => (
-                  <div key={transaction.id} className="flex items-center space-x-4 p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-300">
-                    <div className={`p-3 rounded-2xl ${transaction.amount > 0 ? 'bg-fintech-green/20' : 'bg-red-400/20'}`}>
-                      <transaction.icon className={`w-5 h-5 ${transaction.amount > 0 ? 'text-fintech-green' : 'text-red-400'}`} />
+              {history.length === 0 ? (
+                <div className="text-white/50 text-center py-8">No history yet.</div>
+              ) : (
+                history.map((item, idx) => (
+                  <div key={item.txid || idx} className="flex items-center space-x-4 p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-300">
+                    <div className={`p-3 rounded-2xl ${item.amount > 0 ? 'bg-fintech-green/20' : 'bg-red-400/20'}`}>
+                      <Hand className={`w-5 h-5 ${item.amount > 0 ? 'text-fintech-green' : 'text-red-400'}`} />
                     </div>
                     <div className="flex-1">
-                      <p className="text-white font-ultralight">{transaction.merchant}</p>
-                      <p className="text-white/50 font-ultralight text-sm">{transaction.time}</p>
+                      <p className="text-white font-ultralight">Transaction #{item.txid?.slice(0, 8)}</p>
+                      <p className="text-white/50 font-ultralight text-sm">{new Date(item.created_at).toLocaleDateString()}</p>
                     </div>
                     <div className="text-right">
-                      <p className={`font-ultralight ${transaction.amount > 0 ? 'text-fintech-green' : 'text-white'}`}>
-                        {transaction.amount > 0 ? '+' : ''}₹{Math.abs(transaction.amount).toLocaleString()}
+                      <p className={`font-ultralight ${item.amount > 0 ? 'text-fintech-green' : 'text-white'}`}>
+                        {item.amount > 0 ? '+' : ''}₹{Math.abs(item.amount).toLocaleString()}
                       </p>
                       <p className="text-fintech-green font-ultralight text-xs">Completed</p>
                     </div>
                   </div>
-                ))}
-              </div>
+                ))
+              )}
             </motion.div>
           </div>
         );
@@ -396,7 +384,7 @@ const UserDashboard = () => {
           >
             <div>
               <h1 className="text-3xl md:text-4xl font-ultralight text-white mb-2">
-                Welcome back, Alex
+                Welcome back, {userData?.username || 'User'}
               </h1>
               <p className="text-white/70 font-ultralight">
                 Your secure palm payment dashboard
