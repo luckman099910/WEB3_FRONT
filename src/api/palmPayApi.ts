@@ -1,10 +1,10 @@
 // API utility for PalmPay dashboard and merchant payments
 import axios from 'axios';
-
-const API_BASE = import.meta.env.VITE_BACKEND_URL;
+// @ts-ignore
+import config from '../config';
 
 export const api = axios.create({
-  baseURL: API_BASE,
+  baseURL: config.API_BASE_URL,
   withCredentials: false,
 });
 
