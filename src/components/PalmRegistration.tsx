@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Loader2, CheckCircle, AlertCircle } from "lucide-react";
-import { api } from '../api/palmPayApi';
+import { api, safeJsonParse } from '../api/palmPayApi';
 
 interface PalmRegistrationProps {
   onSuccess?: (user: any) => void;
@@ -33,7 +33,7 @@ const PalmRegistration: React.FC<PalmRegistrationProps> = ({ onSuccess, onClose 
     setLoading(true);
     try {
       // Get user from localStorage (assume user is logged in)
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const user = safeJsonParse(localStorage.getItem('user'), {});
       if (!user || !user.id) throw new Error('User not logged in');
       const res = await api.post('/api/registerPalm', {
         userId: user.id,

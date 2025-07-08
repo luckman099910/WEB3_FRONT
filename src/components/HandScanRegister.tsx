@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Loader2, CheckCircle, AlertCircle, RotateCcw, Camera, X } from 'lucide-react';
 import { api } from '../api/palmPayApi';
+import { safeJsonParse } from '../api/palmPayApi';
 // @ts-ignore
 import { Hands } from '@mediapipe/hands';
 // @ts-ignore
@@ -181,7 +182,7 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
   // Register hand data with backend
   const registerHand = async (handinfo: string) => {
     try {
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const user = safeJsonParse(localStorage.getItem('user'), {});
       if (!user || !user.id) throw new Error('User not logged in');
       await api.post('/api/registerPalm', {
         userId: user.id,

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { DollarSign, Users, Store, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import { assignBalance, getUsers } from "../api/adminApi";
+import { safeJsonParse } from '../api/palmPayApi';
 
 const AdminBalanceManager = ({ onSuccess }) => {
   const [users, setUsers] = useState([]);
@@ -34,7 +35,7 @@ const AdminBalanceManager = ({ onSuccess }) => {
   };
 
   // Only show if user is admin
-  const user = JSON.parse(localStorage.getItem("user") || "null");
+  const user = safeJsonParse(localStorage.getItem("user"), null);
   if (!user || user.role !== "admin") return null;
 
   return (
@@ -85,12 +86,16 @@ const AdminBalanceManager = ({ onSuccess }) => {
           <Users className="w-5 h-5" /> User List
         </h3>
         <ul className="space-y-2">
-          {users.map((u) => (
-            <li key={u.id} className="p-3 rounded-xl bg-white/10 border border-white/20 text-white flex justify-between items-center">
-              <span>{u.username || u.email}</span>
-              <span className="text-sm text-neon-green">Balance: {u.balance}</span>
-            </li>
-          ))}
+          {Array.isArray(users) && users.length > 0 ? (
+            users.map((u) => (
+              <li key={u.id} className="p-3 rounded-xl bg-white/10 border border-white/20 text-white flex justify-between items-center">
+                <span>{u.username || u.email}</span>
+                <span className="text-sm text-neon-green">Balance: {u.balance}</span>
+              </li>
+            ))
+          ) : (
+            <li className="text-white/50 font-ultralight text-center py-4">No users found.</li>
+          )}
         </ul>
       </div>
     </motion.div>

@@ -26,3 +26,13 @@ export const getMerchantPayments = (merchantId: string) =>
   api.get(`/api/merchant/payments`, { params: { merchantId } });
 
 // Add other API methods as needed, using the centralized 'api' instance 
+
+// Utility for safe JSON parsing
+export function safeJsonParse(value: string | null, fallback: any = null) {
+  try {
+    if (!value || value === 'undefined' || value === 'null') return fallback;
+    return JSON.parse(value);
+  } catch {
+    return fallback;
+  }
+} 

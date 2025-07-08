@@ -21,7 +21,7 @@ import {
   UserPlus,
   AlertCircle
 } from 'lucide-react';
-import { api } from '../api/palmPayApi';
+import { api, safeJsonParse } from '../api/palmPayApi';
 import PalmRegistration from '../components/PalmRegistration';
 import HandScanRegister from '../components/HandScanRegister';
 
@@ -43,7 +43,7 @@ const UserDashboard = () => {
   const loadUserDashboard = async () => {
     try {
       setLoading(true);
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const user = safeJsonParse(localStorage.getItem('user'), {});
       if (!user || !user.id) throw new Error('User not logged in');
       const res = await api.get(`/api/dashboard`, { params: { userId: user.id } });
       setUserData(res.data);
@@ -212,24 +212,26 @@ const UserDashboard = () => {
             >
               <h3 className="text-xl font-ultralight text-white mb-4">Recent Transactions</h3>
               <div className="space-y-3">
-                {userData?.transactions?.slice(0, 3).map((transaction: any, index: number) => (
-                  <div key={transaction.txid || index} className="flex items-center space-x-4 p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-300">
-                    <div className={`p-3 rounded-2xl ${transaction.amount > 0 ? 'bg-fintech-green/20' : 'bg-red-400/20'}`}>
-                      <Hand className={`w-5 h-5 ${transaction.amount > 0 ? 'text-fintech-green' : 'text-red-400'}`} />
+                {Array.isArray(userData?.transactions) && userData.transactions.length > 0 ? (
+                  userData.transactions.slice(0, 3).map((transaction: any, index: number) => (
+                    <div key={transaction.txid || index} className="flex items-center space-x-4 p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-300">
+                      <div className={`p-3 rounded-2xl ${transaction.amount > 0 ? 'bg-fintech-green/20' : 'bg-red-400/20'}`}>
+                        <Hand className={`w-5 h-5 ${transaction.amount > 0 ? 'text-fintech-green' : 'text-red-400'}`} />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-white font-ultralight">Transaction #{transaction.txid?.slice(0, 8)}</p>
+                        <p className="text-white/50 font-ultralight text-sm">{new Date(transaction.created_at).toLocaleDateString()}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className={`font-ultralight ${transaction.amount > 0 ? 'text-fintech-green' : 'text-white'}`}>
+                          {transaction.amount > 0 ? '+' : ''}	{Math.abs(transaction.amount).toLocaleString()}
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <p className="text-white font-ultralight">Transaction #{transaction.txid?.slice(0, 8)}</p>
-                      <p className="text-white/50 font-ultralight text-sm">{new Date(transaction.created_at).toLocaleDateString()}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className={`font-ultralight ${transaction.amount > 0 ? 'text-fintech-green' : 'text-white'}`}>
-                        {transaction.amount > 0 ? '+' : ''}₹{Math.abs(transaction.amount).toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                )) || (
+                  ))
+                ) : (
                   <div className="text-center py-8">
-                    <p className="text-white/50 font-ultralight">No transactions yet</p>
+                    <p className="text-white/50 font-ultralight">No transactions found.</p>
                   </div>
                 )}
               </div>
