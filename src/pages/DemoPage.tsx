@@ -115,7 +115,7 @@ const DemoPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-tech-blue py-20">
+    <div className="bg-tech-blue">
       {/* Hero Section */}
       <section className="relative overflow-hidden py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

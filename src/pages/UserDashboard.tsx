@@ -22,7 +22,6 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { api, safeJsonParse } from '../api/palmPayApi';
-import PalmRegistration from '../components/PalmRegistration';
 import HandScanRegister from '../components/HandScanRegister';
 import { useNavigate } from 'react-router-dom';
 

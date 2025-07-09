@@ -84,9 +84,9 @@ const HomePage = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-tech-blue">
+    <div className="bg-tech-blue">
       {/* Hero Section */}
-      <section className="relative overflow-hidden py-20 lg:py-32">
+      <section className="relative overflow-hidden py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <motion.div
@@ -151,7 +151,7 @@ const HomePage = () => {
       </section>
 
       {/* Why PalmPay Section */}
-      <section className="py-20 bg-black/20">
+      <section className="py-8 bg-black/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -188,7 +188,7 @@ const HomePage = () => {
       </section>
 
       {/* How It Works Section */}
-      <section className="py-20">
+      <section className="py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -226,7 +226,7 @@ const HomePage = () => {
       </section>
 
       {/* Features Preview */}
-      <section className="py-20 bg-black/20">
+      <section className="py-8 bg-black/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -264,7 +264,7 @@ const HomePage = () => {
       </section>
 
       {/* Testimonials */}
-      <section className="py-20">
+      <section className="py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -302,7 +302,7 @@ const HomePage = () => {
       </section>
 
       {/* Patent Block */}
-      <section className="py-20 bg-black/20">
+      <section className="py-8 bg-black/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -338,7 +338,7 @@ const HomePage = () => {
       </section>
 
       {/* PalmKiosk & PalmPOS Section */}
-      <section className="py-20">
+      <section className="py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -441,7 +441,7 @@ const HomePage = () => {
       </section>
 
       {/* Join the Movement Section */}
-      <section className="py-20 bg-black/20">
+      <section className="py-8 bg-black/20">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}

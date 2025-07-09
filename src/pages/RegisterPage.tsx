@@ -33,7 +33,7 @@ const RegisterPage = () => {
 
   return (
     <Layout>
-      <div className="flex justify-center items-center min-h-[70vh]">
+      <div className="flex justify-center items-center">
         <form onSubmit={handleRegister} className="w-full max-w-md p-8 rounded-3xl glass-effect border border-white/20 shadow-xl">
           <h2 className="text-2xl font-light text-primary mb-6 text-center">Register for PalmPay</h2>
           {error && <div className="mb-4 text-red-500 text-center">{error}</div>}
