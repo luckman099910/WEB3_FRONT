@@ -66,17 +66,19 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
   // Check if all landmarks are inside the guide box (exact copy from HTML)
   function isHandInBox(landmarks: any[]) {
     if (!landmarks || !canvasRef.current) return false;
+    let inside = 0;
     for (const p of landmarks) {
       const x = p.x * canvasRef.current.width;
       const y = p.y * canvasRef.current.height;
       if (
-        x < GUIDE_BOX.x + 4 ||
-        x > GUIDE_BOX.x + GUIDE_BOX.w - 4 ||
-        y < GUIDE_BOX.y + 4 ||
-        y > GUIDE_BOX.y + GUIDE_BOX.h - 4
-      ) return false;
+        x >= GUIDE_BOX.x + 4 &&
+        x <= GUIDE_BOX.x + GUIDE_BOX.w - 4 &&
+        y >= GUIDE_BOX.y + 4 &&
+        y <= GUIDE_BOX.y + GUIDE_BOX.h - 4
+      ) inside++;
     }
-    return true;
+    // Allow up to 3 points outside the box
+    return inside >= landmarks.length - 3;
   }
 
   // Convert normalized landmark to canvas coordinates
@@ -98,7 +100,10 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
     
     // Draw guide box
     ctx.save();
-    ctx.strokeStyle = handInBox ? '#00FFB2' : '#ff4d4d'; // fintech-green
+    let boxColor = '#ff4d4d';
+    if (handInBox && progress < 1) boxColor = '#00CFFF'; // blue while timing
+    if (handInBox && progress >= 1) boxColor = '#00FFB2'; // green when ready
+    ctx.strokeStyle = boxColor;
     ctx.lineWidth = 4;
     ctx.setLineDash([8, 6]);
     ctx.strokeRect(GUIDE_BOX.x, GUIDE_BOX.y, GUIDE_BOX.w, GUIDE_BOX.h);
@@ -144,9 +149,11 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
 
   // MediaPipe callback (adapted from HTML)
   function onResults(results: any) {
+    let handJustEntered = false;
     if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
       setCurrentLandmarks(results.multiHandLandmarks[0]);
       const inBox = isHandInBox(results.multiHandLandmarks[0]);
+      if (inBox && !handInBox) handJustEntered = true;
       setHandInBox(inBox);
     } else {
       setCurrentLandmarks(null);
@@ -155,7 +162,7 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
     
     // Steady hand logic
     if (handInBox) {
-      if (!steadyStart) setSteadyStart(Date.now());
+      if (!steadyStart || handJustEntered) setSteadyStart(Date.now());
       const newProgress = Math.min(1, (Date.now() - (steadyStart || Date.now())) / STEADY_TIME);
       setProgress(newProgress);
       
@@ -268,7 +275,9 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
     setError('');
     
     try {
-      const hash = hashPalm(currentLandmarks);
+      const norm = normalizeLandmarks(currentLandmarks);
+      console.log('[PalmPay] Normalized landmarks for registration:', norm);
+      const hash = CryptoJS.SHA256(JSON.stringify(norm)).toString();
       await registerPalmHash(user.id, hash);
       setSuccess(true);
       setError('');
@@ -347,11 +356,7 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
       // 4. Start camera with first device
       const deviceId = videoDevices[0]?.deviceId;
       const constraints = {
-        video: {
-          deviceId: deviceId ? { exact: deviceId } : undefined,
-          width: { ideal: 400 },
-          height: { ideal: 300 }
-        },
+        video: true,
         audio: false
       };
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
