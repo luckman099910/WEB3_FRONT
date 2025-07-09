@@ -160,7 +160,7 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
     const setupHandDetection = async () => {
       // @ts-ignore
       const HandsModule = await import('@mediapipe/hands');
-      hands = new HandsModule.Hands({
+      hands = new HandsModule.default.Hands({
         locateFile: (file: string) =>
           `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
       });
