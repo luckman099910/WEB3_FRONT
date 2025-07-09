@@ -14,6 +14,8 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ApplicantsRegisterPage from './pages/ApplicantsRegisterPage';
 import PalmRegisterPage from './pages/PalmRegisterPage';
+import TransferPage from './pages/TransferPage';
+import HistoryPage from './pages/HistoryPage';
 import { useEffect } from 'react';
 
 function RequireAuth({ children }: { children: JSX.Element }) {
@@ -178,6 +180,30 @@ function App() {
                   transition={pageTransition}
                 >
                   <PalmRegisterPage />
+                </motion.div>
+              } />
+              <Route path="/transfer" element={
+                <motion.div
+                  key="transfer"
+                  initial="initial"
+                  animate="in"
+                  exit="out"
+                  variants={pageVariants}
+                  transition={pageTransition}
+                >
+                  <TransferPage />
+                </motion.div>
+              } />
+              <Route path="/history" element={
+                <motion.div
+                  key="history"
+                  initial="initial"
+                  animate="in"
+                  exit="out"
+                  variants={pageVariants}
+                  transition={pageTransition}
+                >
+                  <HistoryPage />
                 </motion.div>
               } />
             </Routes>

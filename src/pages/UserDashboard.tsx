@@ -198,7 +198,10 @@ const UserDashboard = () => {
                     <Hand className="w-5 h-5" />
                     Register Palm
                   </button>
-                  <button className="flex items-center space-x-2 p-4 rounded-2xl bg-white/10 hover:bg-white/20 transition-all duration-300 group">
+                  <button 
+                    className="flex items-center space-x-2 p-4 rounded-2xl bg-white/10 hover:bg-white/20 transition-all duration-300 group"
+                    onClick={() => navigate('/transfer')}
+                  >
                     <ArrowUpRight className="w-5 h-5 text-electric-blue group-hover:scale-110 transition-transform" />
                     <span className="text-white font-ultralight">Send Money</span>
                   </button>
@@ -279,6 +282,8 @@ const UserDashboard = () => {
         );
 
       case 'consent':
+        const handinfo = userData?.user?.handinfo;
+        const hasPalm = !!handinfo && handinfo !== 'null' && handinfo !== 'undefined';
         return (
           <div className="space-y-6">
             <motion.div
@@ -289,27 +294,32 @@ const UserDashboard = () => {
             >
               <h3 className="text-xl font-ultralight text-white mb-4">Biometric Consent Status</h3>
               <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 rounded-2xl bg-fintech-green/10 border border-fintech-green/30">
+                <div className={`flex items-center justify-between p-4 rounded-2xl ${hasPalm ? 'bg-fintech-green/10 border border-fintech-green/30' : 'bg-yellow-900/20 border border-yellow-500/30'}`}>
                   <div className="flex items-center space-x-3">
-                    <div className="p-2 rounded-full bg-fintech-green/20">
-                      <Shield className="w-5 h-5 text-fintech-green" />
+                    <div className={`p-2 rounded-full ${hasPalm ? 'bg-fintech-green/20' : 'bg-yellow-500/20'}`}> 
+                      <Shield className={`w-5 h-5 ${hasPalm ? 'text-fintech-green' : 'text-yellow-400'}`} />
                     </div>
                     <div>
                       <p className="text-white font-ultralight">Consent Status</p>
-                      <p className="text-fintech-green font-ultralight text-sm">Active & Verified</p>
+                      {hasPalm ? (
+                        <p className="text-fintech-green font-ultralight text-sm">Active & Verified</p>
+                      ) : (
+                        <p className="text-yellow-400 font-ultralight text-sm">Palm not registered</p>
+                      )}
                     </div>
                   </div>
-                  <div className="text-fintech-green">✓</div>
+                  <div className={hasPalm ? 'text-fintech-green' : 'text-yellow-400'}>{hasPalm ? '✓' : '!'}</div>
                 </div>
-                
                 <div className="p-4 rounded-2xl bg-white/5">
                   <div className="flex items-center space-x-3 mb-3">
                     <Hand className="w-6 h-6 text-electric-blue" />
                     <span className="text-white font-ultralight">Palm Hash Preview</span>
                   </div>
-                  <p className="text-white/70 font-mono text-sm bg-white/10 p-3 rounded-2xl">
-                    a1b2c3d4e5f6...xyz789
-                  </p>
+                  {hasPalm ? (
+                    <p className="text-white/70 font-mono text-sm bg-white/10 p-3 rounded-2xl">{handinfo.slice(0, 10)}...{handinfo.slice(-6)}</p>
+                  ) : (
+                    <p className="text-yellow-400 font-mono text-sm bg-white/10 p-3 rounded-2xl">No biometric data found</p>
+                  )}
                   <p className="text-white/50 font-ultralight text-xs mt-2">
                     This is your encrypted biometric identifier. Original data is never stored.
                   </p>
