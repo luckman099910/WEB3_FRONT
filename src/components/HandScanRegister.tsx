@@ -8,7 +8,8 @@ import { useNavigate } from 'react-router-dom';
 import CryptoJS from 'crypto-js';
 
 const STEADY_TIME = 5000; // ms (5 seconds steady)
-const GUIDE_BOX = { x: 60, y: 30, w: 280, h: 240 };
+// 1. Fix GUIDE_BOX for 320x240 canvas
+const GUIDE_BOX = { x: 40, y: 20, w: 240, h: 180 };
 
 interface HandScanRegisterProps {
   onCancel?: () => void;
@@ -155,6 +156,9 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
       const inBox = isHandInBox(results.multiHandLandmarks[0]);
       if (inBox && !handInBox) handJustEntered = true;
       setHandInBox(inBox);
+      // Print normalized landmarks every frame
+      const norm = normalizeLandmarks(results.multiHandLandmarks[0]);
+      console.log('[PalmPay] SCAN value (normalized landmarks):', norm);
     } else {
       setCurrentLandmarks(null);
       setHandInBox(false);
@@ -206,7 +210,7 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
       
       // Dynamically load Camera from CDN if not present
       // @ts-ignore
-      if (!window.Camera) {
+      if (!(window as any).Camera) {
         await new Promise((resolve, reject) => {
           const script = document.createElement('script');
           script.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js';
@@ -217,7 +221,7 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
         });
       }
       // @ts-ignore
-      const CameraClass = window.Camera;
+      const CameraClass = (window as any).Camera;
       if (videoRef.current && CameraClass) {
         if (cameraRef.current) cameraRef.current.stop();
         cameraRef.current = new CameraClass(videoRef.current, {
@@ -278,6 +282,7 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
       const norm = normalizeLandmarks(currentLandmarks);
       console.log('[PalmPay] Normalized landmarks for registration:', norm);
       const hash = CryptoJS.SHA256(JSON.stringify(norm)).toString();
+      console.log('[PalmPay] SUCCESS! Registered value:', norm);
       await registerPalmHash(user.id, hash);
       setSuccess(true);
       setError('');
@@ -327,7 +332,7 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
 
     async function setupPalmScan() {
       // 1. Load MediaPipe Hands script
-      if (!window.Hands) {
+      if (!(window as any).Hands) {
         await new Promise((resolve, reject) => {
           const script = document.createElement('script');
           script.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.min.js';
@@ -338,7 +343,7 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
         });
       }
       // 2. Load MediaPipe Camera script
-      if (!window.Camera) {
+      if (!(window as any).Camera) {
         await new Promise((resolve, reject) => {
           const script = document.createElement('script');
           script.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js';
