@@ -9,7 +9,15 @@ import CryptoJS from 'crypto-js';
 
 const STEADY_TIME = 5000; // ms (5 seconds steady)
 // 1. Fix GUIDE_BOX for 320x240 canvas
-const GUIDE_BOX = { x: 40, y: 20, w: 240, h: 180 };
+const VIDEO_WIDTH = 480;
+const VIDEO_HEIGHT = 360;
+// Centered, larger guide box (proportional)
+const GUIDE_BOX = {
+  x: Math.round(VIDEO_WIDTH * 0.125), // 60
+  y: Math.round(VIDEO_HEIGHT * 0.083), // 30
+  w: Math.round(VIDEO_WIDTH * 0.75),   // 360
+  h: Math.round(VIDEO_HEIGHT * 0.75)   // 270
+};
 
 interface HandScanRegisterProps {
   onCancel?: () => void;
@@ -391,9 +399,11 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
         }
         let inBox = false;
         let newProgress = 0;
+        let handJustEntered = false;
         if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
           setCurrentLandmarks(results.multiHandLandmarks[0]);
           inBox = isHandInBox(results.multiHandLandmarks[0]);
+          if (inBox && !handInBox) handJustEntered = true;
           setHandInBox(inBox);
           // Print normalized landmarks every frame
           const norm = normalizeLandmarks(results.multiHandLandmarks[0]);
@@ -402,8 +412,17 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
           setCurrentLandmarks(null);
           setHandInBox(false);
         }
-        if (inBox && steadyStart) {
-          newProgress = Math.min(1, (Date.now() - steadyStart) / STEADY_TIME);
+        // Steady hand logic (fix: set steadyStart when hand enters box)
+        if (inBox) {
+          if (!steadyStart || handJustEntered) setSteadyStart(Date.now());
+          newProgress = Math.min(1, (Date.now() - (steadyStart || Date.now())) / STEADY_TIME);
+          setProgress(newProgress);
+          if (newProgress >= 1 && !success && !loading) {
+            handleRegister();
+          }
+        } else {
+          setSteadyStart(null);
+          setProgress(0);
         }
         // Draw overlay with latest computed values
         drawOverlay(results.multiHandLandmarks?.[0], inBox, newProgress);
@@ -479,16 +498,20 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
         {/* Main Container */}
         <div className="bg-card-bg rounded-xl p-3 shadow-xl">
           {/* Video and Canvas */}
-          <div className="relative w-[320px] h-[240px] mx-auto mb-2">
+          <div className="relative w-full max-w-[480px] aspect-[4/3] mx-auto mb-2 flex items-center justify-center">
             <video
               ref={videoRef}
               autoPlay
               playsInline
               muted
-              className="absolute inset-0 w-full h-full rounded-lg bg-black"
+              width={VIDEO_WIDTH}
+              height={VIDEO_HEIGHT}
+              className="absolute inset-0 w-full h-full rounded-lg bg-black object-cover"
             />
             <canvas
               ref={canvasRef}
+              width={VIDEO_WIDTH}
+              height={VIDEO_HEIGHT}
               className="absolute inset-0 w-full h-full rounded-lg pointer-events-none"
             />
           </div>
