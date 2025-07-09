@@ -158,7 +158,7 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
     }
 
     const setupHandDetection = async () => {
-      // Correct dynamic import for MediaPipe Hands
+      // @ts-ignore
       const HandsModule = await import('@mediapipe/hands');
       hands = new HandsModule.Hands({
         locateFile: (file: string) =>
@@ -195,6 +195,8 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
       if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
         const handLandmarks = results.multiHandLandmarks[0];
         setLandmarks(handLandmarks);
+        // Debug: Output hand scan result to console
+        console.log('[HandScan] Landmarks:', handLandmarks);
         // Draw landmarks and connectors (optional, can comment out for just dots)
         // drawConnectors(ctx, handLandmarks, Hands.HAND_CONNECTIONS, { color: '#00FFAA', lineWidth: 4 });
         // drawLandmarks(ctx, handLandmarks, { color: '#00FFAA', lineWidth: 2 });
