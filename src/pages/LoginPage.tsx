@@ -14,10 +14,10 @@ const LoginPage = () => {
     setError('');
     try {
       const data = await login(email, password);
-      if (data.session) {
-        localStorage.setItem('session', JSON.stringify(data.session));
-      } else if (data.token) {
-        localStorage.setItem('session', JSON.stringify(data.token));
+      if (data.session && typeof data.session === 'string') {
+        localStorage.setItem('session', data.session);
+      } else if (data.token && typeof data.token === 'string') {
+        localStorage.setItem('session', data.token);
       } else {
         localStorage.removeItem('session');
       }
