@@ -283,24 +283,22 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
       setError('Hold your hand steady in the box for 5 seconds to register.');
       return;
     }
-
     const user = safeJsonParse(localStorage.getItem('user'), {});
+    const hasHandInfo = !!user.handinfo;
     if (!user || !user.id) {
       setError('User not logged in');
       return;
     }
-
     setLoading(true);
     setError('');
-    
     try {
       const norm = normalizeLandmarks(currentLandmarks);
-      console.log('[PalmPay] Normalized landmarks for registration:', norm);
       const hash = CryptoJS.SHA256(JSON.stringify(norm)).toString();
-      console.log('[PalmPay] SUCCESS! Registered value:', norm);
+      // If user has handinfo, this is a manual scan (do not update palm_hash)
       await registerPalmHash(user.id, hash);
       setSuccess(true);
       setError('');
+      setTimeout(() => navigate(-1), 1200); // Auto-return after success
     } catch (err: any) {
       setError(err.response?.data?.message || 'Palm registration failed.');
       setSuccess(false);
