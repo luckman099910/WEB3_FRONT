@@ -252,7 +252,7 @@ const UserDashboard = () => {
         );
 
       case 'history':
-        const history = Array.isArray(userData?.user_history) ? userData.user_history : [];
+        const history = Array.isArray(userData?.user?.user_history) ? userData.user.user_history : [];
         return (
           <div className="space-y-6">
             <motion.div
