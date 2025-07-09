@@ -9,14 +9,14 @@ import CryptoJS from 'crypto-js';
 
 const STEADY_TIME = 5000; // ms (5 seconds steady)
 // 1. Fix GUIDE_BOX for 320x240 canvas
-const VIDEO_WIDTH = 400;
-const VIDEO_HEIGHT = 300;
+const VIDEO_WIDTH = 480;
+const VIDEO_HEIGHT = 320;
 // Centered, larger guide box (proportional)
 const GUIDE_BOX = {
-  x: Math.round(VIDEO_WIDTH * 0.083), // 33
-  y: Math.round(VIDEO_HEIGHT * 0.125), // 37
-  w: Math.round(VIDEO_WIDTH * 0.83),   // 332
-  h: Math.round(VIDEO_HEIGHT * 0.75)   // 225
+  x: Math.round(VIDEO_WIDTH * 0.083),
+  y: Math.round(VIDEO_HEIGHT * 0.125),
+  w: Math.round(VIDEO_WIDTH * 0.83),
+  h: Math.round(VIDEO_HEIGHT * 0.75)
 };
 
 interface HandScanRegisterProps {
@@ -334,8 +334,16 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
   // Set canvas size
   const resizeCanvas = () => {
     if (canvasRef.current) {
-      canvasRef.current.width = VIDEO_WIDTH;
-      canvasRef.current.height = VIDEO_HEIGHT;
+      // Responsive: use parent width up to max, maintain 3:2 aspect ratio
+      const parent = canvasRef.current.parentElement;
+      let width = VIDEO_WIDTH;
+      let height = VIDEO_HEIGHT;
+      if (parent) {
+        width = Math.min(parent.clientWidth, 640);
+        height = Math.round(width * 2 / 3);
+      }
+      canvasRef.current.width = width;
+      canvasRef.current.height = height;
     }
   };
 
@@ -473,7 +481,7 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
 
   return (
     <div className="bg-deep-navy text-text-primary h-[calc(100vh-5rem)] flex items-center justify-center">
-      <div className="w-full max-w-md mx-auto">
+      <div className="w-full max-w-2xl mx-auto flex flex-col items-center">
         {/* Header */}
         <div className="flex items-center justify-center mb-4 relative">
           <button
@@ -506,21 +514,23 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
         {/* Main Container */}
         <div className="bg-card-bg rounded-xl p-3 shadow-xl">
           {/* Video and Canvas */}
-          <div className="relative w-full max-w-[360px] aspect-[3/4] mx-auto mb-2 flex items-center justify-center">
+          <div className="relative flex flex-col items-center justify-center bg-black rounded-2xl shadow-lg overflow-hidden mb-4 w-full" style={{ aspectRatio: '3/2', maxWidth: 640 }}>
             <video
               ref={videoRef}
+              className="absolute top-0 left-0 w-full h-full object-cover rounded-2xl"
+              style={{ aspectRatio: '3/2', maxWidth: '100%' }}
+              width={VIDEO_WIDTH}
+              height={VIDEO_HEIGHT}
               autoPlay
               playsInline
               muted
-              width={VIDEO_WIDTH}
-              height={VIDEO_HEIGHT}
-              className="absolute inset-0 w-full h-full rounded-lg bg-black object-cover"
             />
             <canvas
               ref={canvasRef}
+              className="absolute top-0 left-0 w-full h-full pointer-events-none"
+              style={{ aspectRatio: '3/2', maxWidth: '100%' }}
               width={VIDEO_WIDTH}
               height={VIDEO_HEIGHT}
-              className="absolute inset-0 w-full h-full rounded-lg pointer-events-none"
             />
           </div>
 
