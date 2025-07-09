@@ -483,15 +483,15 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
     <div className="bg-deep-navy text-text-primary h-[calc(100vh-5rem)] flex items-center justify-center">
       <div className="w-full max-w-2xl mx-auto flex flex-col items-center">
         {/* Header */}
-        <div className="flex items-center justify-center mb-4 relative">
+        <div className="relative w-full flex flex-col items-center mb-4">
           <button
             onClick={() => navigate(-1)}
-            className="absolute left-0 flex items-center gap-1 px-2 py-1 text-text-secondary hover:text-fintech-green transition-colors"
+            className="absolute left-0 top-0 flex items-center gap-1 text-white/70 hover:text-neon-green transition-colors z-10 px-2 py-1"
           >
-            <ArrowLeft size={20} />
-            <span className="font-medium text-base">Back</span>
+            <ArrowLeft className="w-5 h-5" />
+            <span className="font-light">Back</span>
           </button>
-          <h1 className="text-2xl font-bold text-center flex-1">Hand Scan & Verify</h1>
+          <h2 className="text-2xl font-bold text-white text-center w-full">Hand Scan &amp; Verify</h2>
         </div>
 
         {/* Camera Selection */}
