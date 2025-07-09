@@ -229,7 +229,7 @@ const UserDashboard = () => {
                     .sort((a, b) => new Date(b.time || b.created_at).getTime() - new Date(a.time || a.created_at).getTime())
                     .slice(0, 10)
                     .map((item, idx) => (
-                      <div key={item.time || item.txid || idx} className={`flex items-center space-x-4 p-4 pt-3 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-300${idx !== userData.user.user_history.length - 1 ? ' mb-4' : ''}`}> 
+                      <div key={item.time || item.txid || idx} className="flex items-center space-x-4 p-4 pt-3 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-300" style={{ marginBottom: '15px' }}> 
                         <div className={`p-3 rounded-2xl ${item.type === 'palm_registration' || item.type === 'palm_manual_scan' ? 'bg-electric-blue/20' : item.amount > 0 ? 'bg-fintech-green/20' : 'bg-red-400/20'}`}> 
                           {item.type === 'palm_registration' || item.type === 'palm_manual_scan' ? (
                             <Hand className="w-5 h-5 text-electric-blue" />
@@ -443,7 +443,7 @@ const UserDashboard = () => {
           >
             <div>
               <h1 className="text-3xl md:text-4xl font-ultralight text-white mb-2">
-                Welcome back, {userData?.username || 'User'}
+                Welcome back, {userData?.user?.username || userData?.user?.email || 'User'}
               </h1>
               <p className="text-white/70 font-ultralight">
                 Your secure palm payment dashboard
