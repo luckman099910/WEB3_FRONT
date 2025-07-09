@@ -9,14 +9,14 @@ import CryptoJS from 'crypto-js';
 
 const STEADY_TIME = 5000; // ms (5 seconds steady)
 // 1. Fix GUIDE_BOX for 320x240 canvas
-const VIDEO_WIDTH = 480;
-const VIDEO_HEIGHT = 360;
+const VIDEO_WIDTH = 360;
+const VIDEO_HEIGHT = 480;
 // Centered, larger guide box (proportional)
 const GUIDE_BOX = {
-  x: Math.round(VIDEO_WIDTH * 0.125), // 60
-  y: Math.round(VIDEO_HEIGHT * 0.083), // 30
-  w: Math.round(VIDEO_WIDTH * 0.75),   // 360
-  h: Math.round(VIDEO_HEIGHT * 0.75)   // 270
+  x: Math.round(VIDEO_WIDTH * 0.083), // 30
+  y: Math.round(VIDEO_HEIGHT * 0.125), // 60
+  w: Math.round(VIDEO_WIDTH * 0.83),   // 300
+  h: Math.round(VIDEO_HEIGHT * 0.75)   // 360
 };
 
 interface HandScanRegisterProps {
@@ -46,6 +46,9 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
   const cameraRef = useRef<any>(null);
   
   const navigate = useNavigate();
+
+  const steadyStartRef = useRef<number | null>(null);
+  const handInBoxRef = useRef(false);
 
   // Normalize landmarks for stable hash (exact copy from HTML)
   function normalizeLandmarks(landmarks: any[]) {
@@ -164,20 +167,22 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
     if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
       setCurrentLandmarks(results.multiHandLandmarks[0]);
       inBox = isHandInBox(results.multiHandLandmarks[0]);
-      if (inBox && !handInBox) handJustEntered = true;
+      if (inBox && !handInBoxRef.current) handJustEntered = true;
+      handInBoxRef.current = inBox;
       setHandInBox(inBox);
       // Print normalized landmarks every frame
       const norm = normalizeLandmarks(results.multiHandLandmarks[0]);
       console.log('[PalmPay] SCAN value (normalized landmarks):', norm);
     } else {
       setCurrentLandmarks(null);
+      handInBoxRef.current = false;
       setHandInBox(false);
     }
     
     // Steady hand logic
     if (inBox) {
-      if (!steadyStart || handJustEntered) setSteadyStart(Date.now());
-      newProgress = Math.min(1, (Date.now() - (steadyStart || Date.now())) / STEADY_TIME);
+      if (!steadyStartRef.current || handJustEntered) steadyStartRef.current = Date.now();
+      newProgress = Math.min(1, (Date.now() - (steadyStartRef.current || Date.now())) / STEADY_TIME);
       setProgress(newProgress);
       
       // Auto-register when progress reaches 1
@@ -185,7 +190,7 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
         handleRegister();
       }
     } else {
-      setSteadyStart(null);
+      steadyStartRef.current = null;
       setProgress(0);
     }
     
@@ -309,8 +314,9 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
     setSuccess(false);
     setError('');
     setProgress(0);
-    setSteadyStart(null);
+    steadyStartRef.current = null;
     setCurrentLandmarks(null);
+    handInBoxRef.current = false;
     setHandInBox(false);
   };
 
@@ -403,25 +409,27 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
         if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
           setCurrentLandmarks(results.multiHandLandmarks[0]);
           inBox = isHandInBox(results.multiHandLandmarks[0]);
-          if (inBox && !handInBox) handJustEntered = true;
-          setHandInBox(inBox);
+          handJustEntered = inBox && !handInBoxRef.current;
+          handInBoxRef.current = inBox;
+          setHandInBox(inBox); // for UI
           // Print normalized landmarks every frame
           const norm = normalizeLandmarks(results.multiHandLandmarks[0]);
           console.log('[PalmPay] SCAN value (normalized landmarks):', norm);
         } else {
           setCurrentLandmarks(null);
+          handInBoxRef.current = false;
           setHandInBox(false);
         }
-        // Steady hand logic (fix: set steadyStart when hand enters box)
+        // Steady hand logic (use ref for timer)
         if (inBox) {
-          if (!steadyStart || handJustEntered) setSteadyStart(Date.now());
-          newProgress = Math.min(1, (Date.now() - (steadyStart || Date.now())) / STEADY_TIME);
+          if (!steadyStartRef.current || handJustEntered) steadyStartRef.current = Date.now();
+          newProgress = Math.min(1, (Date.now() - (steadyStartRef.current || Date.now())) / STEADY_TIME);
           setProgress(newProgress);
           if (newProgress >= 1 && !success && !loading) {
             handleRegister();
           }
         } else {
-          setSteadyStart(null);
+          steadyStartRef.current = null;
           setProgress(0);
         }
         // Draw overlay with latest computed values
@@ -498,7 +506,7 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
         {/* Main Container */}
         <div className="bg-card-bg rounded-xl p-3 shadow-xl">
           {/* Video and Canvas */}
-          <div className="relative w-full max-w-[480px] aspect-[4/3] mx-auto mb-2 flex items-center justify-center">
+          <div className="relative w-full max-w-[360px] aspect-[3/4] mx-auto mb-2 flex items-center justify-center">
             <video
               ref={videoRef}
               autoPlay
