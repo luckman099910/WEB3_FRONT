@@ -3,8 +3,6 @@ import { motion } from 'framer-motion';
 import { Loader2, CheckCircle, AlertCircle, RotateCcw, Camera as CameraIcon, ArrowLeft } from 'lucide-react';
 import { registerPalmHash, safeJsonParse } from '../api/palmPayApi';
 // @ts-ignore
-import { Hands } from '@mediapipe/hands';
-// @ts-ignore
 import { Camera } from '@mediapipe/camera_utils';
 import { useNavigate } from 'react-router-dom';
 import CryptoJS from 'crypto-js';
@@ -298,20 +296,37 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
 
   // Initialize MediaPipe Hands
   useEffect(() => {
-    handsRef.current = new Hands({
-      locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
-    });
-    
-    handsRef.current.setOptions({
-      maxNumHands: 1,
-      modelComplexity: 1,
-      minDetectionConfidence: 0.7,
-      minTrackingConfidence: 0.7
-    });
-    
-    handsRef.current.onResults(onResults);
-    
+    let isMounted = true;
+    async function loadHands() {
+      // @ts-ignore
+      if (!window.Hands) {
+        await new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.min.js';
+          script.async = true;
+          script.onload = resolve;
+          script.onerror = reject;
+          document.body.appendChild(script);
+        });
+      }
+      // @ts-ignore
+      const HandsClass = window.Hands;
+      if (isMounted && HandsClass) {
+        handsRef.current = new HandsClass({
+          locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+        });
+        handsRef.current.setOptions({
+          maxNumHands: 1,
+          modelComplexity: 1,
+          minDetectionConfidence: 0.7,
+          minTrackingConfidence: 0.7
+        });
+        handsRef.current.onResults(onResults);
+      }
+    }
+    loadHands();
     return () => {
+      isMounted = false;
       if (handsRef.current) {
         handsRef.current.close();
       }
