@@ -10,10 +10,25 @@ export const api = axios.create({
 
 // Attach JWT token to every request if available
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
+  let token = '';
+  const session = localStorage.getItem('session');
+  if (session) {
+    try {
+      // If session is a JWT string
+      if (session.startsWith('eyJ')) {
+        token = session.replace(/['"]+/g, '');
+      } else {
+        // If session is an object with a token property
+        const parsed = JSON.parse(session);
+        token = parsed.token || '';
+      }
+    } catch {
+      token = '';
+    }
+  }
   if (token) {
     config.headers = config.headers || {};
-    config.headers['Authorization'] = `Bearer ${token.replace(/['"]+/g, '')}`;
+    config.headers['Authorization'] = `Bearer ${token}`;
   }
   return config;
 });
