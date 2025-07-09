@@ -9,14 +9,14 @@ import CryptoJS from 'crypto-js';
 
 const STEADY_TIME = 5000; // ms (5 seconds steady)
 // 1. Fix GUIDE_BOX for 320x240 canvas
-const VIDEO_WIDTH = 360;
-const VIDEO_HEIGHT = 480;
+const VIDEO_WIDTH = 400;
+const VIDEO_HEIGHT = 300;
 // Centered, larger guide box (proportional)
 const GUIDE_BOX = {
-  x: Math.round(VIDEO_WIDTH * 0.083), // 30
-  y: Math.round(VIDEO_HEIGHT * 0.125), // 60
-  w: Math.round(VIDEO_WIDTH * 0.83),   // 300
-  h: Math.round(VIDEO_HEIGHT * 0.75)   // 360
+  x: Math.round(VIDEO_WIDTH * 0.083), // 33
+  y: Math.round(VIDEO_HEIGHT * 0.125), // 37
+  w: Math.round(VIDEO_WIDTH * 0.83),   // 332
+  h: Math.round(VIDEO_HEIGHT * 0.75)   // 225
 };
 
 interface HandScanRegisterProps {
@@ -245,8 +245,8 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
               await handsRef.current.send({image: videoRef.current});
             }
           },
-          width: 400,
-          height: 300
+          width: VIDEO_WIDTH,
+          height: VIDEO_HEIGHT
         });
         cameraRef.current.start();
       }
@@ -334,8 +334,8 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
   // Set canvas size
   const resizeCanvas = () => {
     if (canvasRef.current) {
-      canvasRef.current.width = 400;
-      canvasRef.current.height = 300;
+      canvasRef.current.width = VIDEO_WIDTH;
+      canvasRef.current.height = VIDEO_HEIGHT;
     }
   };
 
@@ -445,8 +445,8 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
               await handsInstance.send({ image: videoRef.current });
             }
           },
-          width: 400,
-          height: 300
+          width: VIDEO_WIDTH,
+          height: VIDEO_HEIGHT
         });
         cameraInstance.start();
         cameraRef.current = cameraInstance;
