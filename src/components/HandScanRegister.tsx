@@ -196,9 +196,23 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
         videoRef.current.srcObject = stream;
       }
       
-      if (videoRef.current) {
+      // Dynamically load Camera from CDN if not present
+      // @ts-ignore
+      if (!window.Camera) {
+        await new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js';
+          script.async = true;
+          script.onload = resolve;
+          script.onerror = reject;
+          document.body.appendChild(script);
+        });
+      }
+      // @ts-ignore
+      const CameraClass = window.Camera;
+      if (videoRef.current && CameraClass) {
         if (cameraRef.current) cameraRef.current.stop();
-        cameraRef.current = new Camera(videoRef.current, {
+        cameraRef.current = new CameraClass(videoRef.current, {
           onFrame: async () => {
             if (handsRef.current && videoRef.current) {
               await handsRef.current.send({image: videoRef.current});
