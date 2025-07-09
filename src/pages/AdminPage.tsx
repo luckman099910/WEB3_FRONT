@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Shield, 
@@ -17,6 +17,10 @@ import {
 import { useNavigate } from 'react-router-dom';
 import AdminBalanceManager from '../components/AdminBalanceManager';
 import logo from '../assets/palmpay-logo.png';
+import { Tabs, Tab } from '@mui/material'; // If not installed, replace with custom tab logic or Tailwind
+import { getUsers, assignBalance } from '../api/adminApi';
+import { getApplicants } from '../api/applicantsApi';
+import { api } from '../api/palmPayApi';
 
 const AdminPage = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -26,7 +30,86 @@ const AdminPage = () => {
     email: '',
     password: ''
   });
+  const [tabIndex, setTabIndex] = useState(0);
+  const [users, setUsers] = useState([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [usersError, setUsersError] = useState('');
+  const [applicants, setApplicants] = useState([]);
+  const [applicantsLoading, setApplicantsLoading] = useState(false);
+  const [applicantsError, setApplicantsError] = useState('');
+  const [transactions, setTransactions] = useState([]);
+  const [transactionsLoading, setTransactionsLoading] = useState(false);
+  const [transactionsError, setTransactionsError] = useState('');
+  const [sendValueUser, setSendValueUser] = useState('');
+  const [sendValueAmount, setSendValueAmount] = useState('');
+  const [sendValueLoading, setSendValueLoading] = useState(false);
+  const [sendValueError, setSendValueError] = useState('');
+  const [sendValueSuccess, setSendValueSuccess] = useState('');
   const navigate = useNavigate();
+
+  // Admin check
+  React.useEffect(() => {
+    const user = JSON.parse(localStorage.getItem('user') || 'null');
+    if (!user || user.is_admin !== true) {
+      navigate('/user-dashboard');
+    }
+  }, [navigate]);
+
+  // Fetch users
+  useEffect(() => {
+    if (tabIndex === 0 || tabIndex === 1) {
+      setUsersLoading(true);
+      setUsersError('');
+      getUsers()
+        .then((res) => setUsers(res.data?.users || res.users || []))
+        .catch((err) => setUsersError(err.message || 'Failed to load users'))
+        .finally(() => setUsersLoading(false));
+    }
+  }, [tabIndex]);
+
+  // Fetch applicants
+  useEffect(() => {
+    if (tabIndex === 3) {
+      setApplicantsLoading(true);
+      setApplicantsError('');
+      getApplicants()
+        .then((res) => setApplicants(res.data?.applicants || res.applicants || []))
+        .catch((err) => setApplicantsError(err.message || 'Failed to load applicants'))
+        .finally(() => setApplicantsLoading(false));
+    }
+  }, [tabIndex]);
+
+  // Fetch transactions
+  useEffect(() => {
+    if (tabIndex === 2) {
+      setTransactionsLoading(true);
+      setTransactionsError('');
+      api.get('/api/transaction')
+        .then((res) => setTransactions(res.data?.transactions || res.transactions || []))
+        .catch((err) => setTransactionsError(err.message || 'Failed to load transactions'))
+        .finally(() => setTransactionsLoading(false));
+    }
+  }, [tabIndex]);
+
+  // Send value handler
+  const handleSendValue = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSendValueError('');
+    setSendValueSuccess('');
+    setSendValueLoading(true);
+    try {
+      await assignBalance(sendValueUser, Number(sendValueAmount));
+      setSendValueSuccess('Value sent successfully!');
+      setSendValueUser('');
+      setSendValueAmount('');
+      // Refresh users
+      getUsers().then((res) => setUsers(res.data?.users || res.users || []));
+    } catch (err: any) {
+      setSendValueError(err.message || 'Failed to send value');
+    } finally {
+      setSendValueLoading(false);
+    }
+  };
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,6 +177,25 @@ const AdminPage = () => {
       time: '15 minutes ago'
     }
   ];
+
+  const tabList = [
+    { label: 'Users', icon: Users },
+    { label: 'Send Value', icon: DollarSign },
+    { label: 'Transactions', icon: CreditCard },
+    { label: 'Applicants', icon: Hand }
+  ];
+  // Duplicate tabIndex declaration removed here
+
+  // Add delete API calls
+  const deleteUser = async (userId: string) => {
+    await api.delete(`/api/auth/users/${userId}`);
+  };
+  const deleteTransaction = async (txid: string) => {
+    await api.delete(`/api/transaction/${txid}`);
+  };
+  const deleteApplicant = async (applicantId: string) => {
+    await api.delete(`/api/applicants/${applicantId}`);
+  };
 
   if (showBalanceManager) {
     return (
@@ -198,135 +300,223 @@ const AdminPage = () => {
     <div className="min-h-screen py-20">
       {/* Header */}
       <section className="mb-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="flex items-center justify-between"
+        <div className="flex items-center justify-between max-w-3xl mx-auto px-4">
+          <div className="flex items-center gap-3">
+            <img src={logo} alt="PalmPay Logo" className="h-10 w-10 rounded-full bg-black" />
+            <h1 className="text-2xl font-bold text-white">Admin Dashboard</h1>
+          </div>
+          <button
+            onClick={() => navigate('/user-dashboard')}
+            className="px-4 py-2 rounded-full bg-gradient-to-r from-fintech-green to-electric-blue text-black font-medium hover:shadow-lg hover:shadow-fintech-green/25 transition-all duration-300"
           >
+            User Page
+          </button>
+        </div>
+      </section>
+      {/* Tabs */}
+      <div className="max-w-3xl mx-auto px-4">
+        <div className="flex border-b border-electric-blue/30 mb-6">
+          {tabList.map((tab, idx) => (
+            <button
+              key={tab.label}
+              onClick={() => setTabIndex(idx)}
+              className={`flex items-center gap-2 px-6 py-3 text-lg font-medium transition-colors border-b-2 -mb-px ${
+                tabIndex === idx
+                  ? 'border-electric-blue text-electric-blue bg-white/5'
+                  : 'border-transparent text-white/60 hover:text-electric-blue'
+              }`}
+            >
+              <tab.icon size={20} />
+              {tab.label}
+            </button>
+          ))}
+        </div>
+        {/* Tab Content */}
+        <div className="bg-card-bg rounded-xl shadow-xl p-6 min-h-[400px]">
+          {tabIndex === 0 && (
             <div>
-              <h1 className="text-3xl md:text-4xl font-ultralight text-white mb-2">
-                Admin Dashboard
-              </h1>
-              <p className="text-white/70 font-ultralight">
-                Monitor and manage PalmPay operations
-              </p>
+              <h2 className="text-xl font-bold mb-4">All Users</h2>
+              {usersLoading ? (
+                <div className="text-text-secondary">Loading users...</div>
+              ) : usersError ? (
+                <div className="text-red-400">{usersError}</div>
+              ) : (
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-white/10">
+                      <th className="py-2 px-3">Name</th>
+                      <th className="py-2 px-3">Email</th>
+                      <th className="py-2 px-3">Balance</th>
+                      <th className="py-2 px-3">Role</th>
+                      <th className="py-2 px-3">Created</th>
+                      <th className="py-2 px-3">Delete</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {users.map((u: any) => (
+                      <tr key={u.id} className="border-b border-white/5 hover:bg-white/5">
+                        <td className="py-2 px-3">{u.username}</td>
+                        <td className="py-2 px-3">{u.email}</td>
+                        <td className="py-2 px-3">{u.balance}</td>
+                        <td className="py-2 px-3">{u.role}</td>
+                        <td className="py-2 px-3">{u.created_at?.slice(0, 10)}</td>
+                        <td className="py-2 px-3">
+                          <button
+                            className="text-red-400 hover:text-red-600 font-bold"
+                            onClick={async () => {
+                              if (window.confirm('Delete this user?')) {
+                                await deleteUser(u.id);
+                                setUsers(users.filter((user: any) => user.id !== u.id));
+                              }
+                            }}
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
-            <div className="flex items-center space-x-4">
-              <button className="p-3 rounded-2xl bg-white/10 hover:bg-white/20 transition-all duration-300">
-                <Settings className="w-6 h-6 text-white" />
-              </button>
-              <button 
-                onClick={() => setIsLoggedIn(false)}
-                className="px-4 py-2 rounded-2xl bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-all duration-300 font-ultralight"
-              >
-                Logout
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Stats Grid */}
-      <section className="mb-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {stats.map((stat, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
-                className="p-6 rounded-3xl bg-white/5 backdrop-blur-xl border border-white/10 hover:border-fintech-green/30 transition-all duration-300"
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <div className={`p-3 rounded-2xl bg-gradient-to-br ${stat.color} bg-opacity-20`}>
-                    <stat.icon className="w-6 h-6 text-white" />
-                  </div>
-                  <span className="text-sm text-fintech-green font-ultralight">{stat.change}</span>
-                </div>
-                <h3 className="text-2xl font-ultralight text-white mb-1">{stat.value}</h3>
-                <p className="text-white/70 font-ultralight text-sm">{stat.title}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Main Content */}
-      <section>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-3 gap-8">
-            {/* Activity Feed */}
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8 }}
-              className="lg:col-span-2 p-6 rounded-3xl bg-white/5 backdrop-blur-xl border border-white/10"
-            >
-              <h2 className="text-xl font-ultralight text-white mb-6">Recent Activity</h2>
-              <div className="space-y-4">
-                {recentActivity.map((activity, index) => (
-                  <div key={index} className="flex items-center space-x-3 p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-300">
-                    <div className={`p-2 rounded-full ${
-                      activity.type === 'success' ? 'bg-fintech-green/20' :
-                      activity.type === 'warning' ? 'bg-yellow-400/20' :
-                      'bg-blue-400/20'
-                    }`}>
-                      {activity.type === 'success' ? (
-                        <CheckCircle className="w-4 h-4 text-fintech-green" />
-                      ) : activity.type === 'warning' ? (
-                        <AlertCircle className="w-4 h-4 text-yellow-400" />
-                      ) : (
-                        <Eye className="w-4 h-4 text-blue-400" />
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-white font-ultralight text-sm">{activity.message}</p>
-                      <p className="text-white/50 font-ultralight text-xs">{activity.time}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-
-            {/* Quick Actions */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8 }}
-              className="p-6 rounded-3xl bg-white/5 backdrop-blur-xl border border-white/10"
-            >
-              <h2 className="text-xl font-ultralight text-white mb-6">Quick Actions</h2>
-              <div className="space-y-4">
-                {[
-                  { 
-                    icon: DollarSign, 
-                    title: 'Assign Balance', 
-                    color: 'from-fintech-green to-electric-blue',
-                    action: () => setShowBalanceManager(true)
-                  },
-                  { icon: Users, title: 'User Management', color: 'from-blue-400 to-cyan-400' },
-                  { icon: CreditCard, title: 'Transactions', color: 'from-purple-400 to-pink-400' },
-                  { icon: Shield, title: 'Security', color: 'from-orange-400 to-red-400' }
-                ].map((action, index) => (
-                  <button
-                    key={index}
-                    onClick={action.action}
-                    className="w-full flex items-center space-x-3 p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-300 group"
+          )}
+          {tabIndex === 1 && (
+            <div>
+              <h2 className="text-xl font-bold mb-4">Send Value</h2>
+              <form onSubmit={handleSendValue} className="space-y-4 max-w-md">
+                <div>
+                  <label className="block text-sm text-white/70 mb-2">Select User</label>
+                  <select
+                    value={sendValueUser}
+                    onChange={(e) => setSendValueUser(e.target.value)}
+                    className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/20 text-white focus:outline-none"
+                    required
                   >
-                    <div className={`p-3 rounded-2xl bg-gradient-to-br ${action.color} bg-opacity-20 group-hover:scale-110 transition-transform`}>
-                      <action.icon className="w-5 h-5 text-white" />
-                    </div>
-                    <span className="text-white font-ultralight">{action.title}</span>
-                  </button>
-                ))}
-              </div>
-            </motion.div>
-          </div>
+                    <option value="">-- Select a user --</option>
+                    {users.map((u: any) => (
+                      <option key={u.id} value={u.id}>{u.username || u.email}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm text-white/70 mb-2">Amount</label>
+                  <input
+                    type="number"
+                    value={sendValueAmount}
+                    onChange={(e) => setSendValueAmount(e.target.value)}
+                    className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/20 text-white focus:outline-none"
+                    placeholder="Enter amount"
+                    required
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="w-full px-6 py-3 rounded-full btn-primary animate-glow font-medium"
+                  disabled={sendValueLoading}
+                >
+                  {sendValueLoading ? 'Sending...' : 'Send Value'}
+                </button>
+                {sendValueError && <div className="text-red-400 mt-2">{sendValueError}</div>}
+                {sendValueSuccess && <div className="text-green-400 mt-2">{sendValueSuccess}</div>}
+              </form>
+            </div>
+          )}
+          {tabIndex === 2 && (
+            <div>
+              <h2 className="text-xl font-bold mb-4">All Transactions</h2>
+              {transactionsLoading ? (
+                <div className="text-text-secondary">Loading transactions...</div>
+              ) : transactionsError ? (
+                <div className="text-red-400">{transactionsError}</div>
+              ) : (
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-white/10">
+                      <th className="py-2 px-3">From User</th>
+                      <th className="py-2 px-3">To Merchant</th>
+                      <th className="py-2 px-3">Amount</th>
+                      <th className="py-2 px-3">Status</th>
+                      <th className="py-2 px-3">Created</th>
+                      <th className="py-2 px-3">Delete</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {transactions.map((t: any) => (
+                      <tr key={t.txid} className="border-b border-white/5 hover:bg-white/5">
+                        <td className="py-2 px-3">{t.from_user_id}</td>
+                        <td className="py-2 px-3">{t.to_merchant_id}</td>
+                        <td className="py-2 px-3">{t.amount}</td>
+                        <td className="py-2 px-3">{t.status}</td>
+                        <td className="py-2 px-3">{t.created_at?.slice(0, 10)}</td>
+                        <td className="py-2 px-3">
+                          <button
+                            className="text-red-400 hover:text-red-600 font-bold"
+                            onClick={async () => {
+                              if (window.confirm('Delete this transaction?')) {
+                                await deleteTransaction(t.txid);
+                                setTransactions(transactions.filter((tx: any) => tx.txid !== t.txid));
+                              }
+                            }}
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
+          {tabIndex === 3 && (
+            <div>
+              <h2 className="text-xl font-bold mb-4">Applicants</h2>
+              {applicantsLoading ? (
+                <div className="text-text-secondary">Loading applicants...</div>
+              ) : applicantsError ? (
+                <div className="text-red-400">{applicantsError}</div>
+              ) : (
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-white/10">
+                      <th className="py-2 px-3">Name</th>
+                      <th className="py-2 px-3">Email</th>
+                      <th className="py-2 px-3">Phone</th>
+                      <th className="py-2 px-3">Description</th>
+                      <th className="py-2 px-3">Created</th>
+                      <th className="py-2 px-3">Delete</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {applicants.map((a: any) => (
+                      <tr key={a.id} className="border-b border-white/5 hover:bg-white/5">
+                        <td className="py-2 px-3">{a.username}</td>
+                        <td className="py-2 px-3">{a.email}</td>
+                        <td className="py-2 px-3">{a.phonenumber}</td>
+                        <td className="py-2 px-3">{a.description}</td>
+                        <td className="py-2 px-3">{a.created_at?.slice(0, 10)}</td>
+                        <td className="py-2 px-3">
+                          <button
+                            className="text-red-400 hover:text-red-600 font-bold"
+                            onClick={async () => {
+                              if (window.confirm('Delete this applicant?')) {
+                                await deleteApplicant(a.id);
+                                setApplicants(applicants.filter((app: any) => app.id !== a.id));
+                              }
+                            }}
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
         </div>
-      </section>
+      </div>
     </div>
   );
 };

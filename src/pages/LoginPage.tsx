@@ -22,7 +22,9 @@ const LoginPage = () => {
         localStorage.removeItem('session');
       }
       if (data.user) {
-        localStorage.setItem('user', JSON.stringify(data.user));
+        // Ensure is_admin is present and boolean
+        const userWithIsAdmin = { ...data.user, is_admin: Boolean(data.user.is_admin) };
+        localStorage.setItem('user', JSON.stringify(userWithIsAdmin));
       } else {
         localStorage.removeItem('user');
       }

@@ -36,7 +36,7 @@ const AdminBalanceManager = ({ onSuccess }) => {
 
   // Only show if user is admin
   const user = safeJsonParse(localStorage.getItem("user"), null);
-  if (!user || user.role !== "admin") return null;
+  if (!user || user.is_admin !== true) return null;
 
   return (
     <motion.div className="p-8 rounded-3xl bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl border border-white/20">
