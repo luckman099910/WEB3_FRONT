@@ -19,7 +19,8 @@ import {
   EyeOff,
   Coins,
   UserPlus,
-  AlertCircle
+  AlertCircle,
+  CheckCircle
 } from 'lucide-react';
 import { api, safeJsonParse } from '../api/palmPayApi';
 import HandScanRegister from '../components/HandScanRegister';
@@ -190,12 +191,18 @@ const UserDashboard = () => {
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">
-                  <button 
-                    className="flex items-center gap-2 px-6 py-4 rounded-2xl bg-gradient-to-r from-fintech-green to-electric-blue text-white font-medium shadow-lg hover:scale-[1.02] transition-transform duration-200"
-                    onClick={() => navigate('/palm-register')}
+                  <button
+                    className={`flex items-center gap-2 px-6 py-4 rounded-2xl font-medium shadow-lg hover:scale-[1.02] transition-transform duration-200 ${userData?.user?.handinfo ? 'bg-green-900/80 text-neon-green' : 'bg-gradient-to-r from-fintech-green to-electric-blue text-white'}`}
+                    onClick={() => setShowRegistration(true)}
                   >
                     <Hand className="w-5 h-5" />
-                    Register Palm
+                    {userData?.user?.handinfo ? (
+                      <>
+                        REGISTERED <CheckCircle className="w-5 h-5 ml-2 text-neon-green" />
+                      </>
+                    ) : (
+                      'Register Palm'
+                    )}
                   </button>
                   <button 
                     className="flex items-center space-x-2 p-4 rounded-2xl bg-white/10 hover:bg-white/20 transition-all duration-300 group"
@@ -254,24 +261,41 @@ const UserDashboard = () => {
               transition={{ duration: 0.6 }}
               className="p-6 rounded-3xl bg-white/5 backdrop-blur-xl border border-white/10"
             >
-              <h3 className="text-xl font-ultralight text-white mb-4">Transaction History</h3>
+              <h3 className="text-xl font-ultralight text-white mb-4">History</h3>
               {history.length === 0 ? (
                 <div className="text-white/50 text-center py-8">No history yet.</div>
               ) : (
                 history.map((item, idx) => (
-                  <div key={item.txid || idx} className="flex items-center space-x-4 p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-300">
-                    <div className={`p-3 rounded-2xl ${item.amount > 0 ? 'bg-fintech-green/20' : 'bg-red-400/20'}`}>
-                      <Hand className={`w-5 h-5 ${item.amount > 0 ? 'text-fintech-green' : 'text-red-400'}`} />
+                  <div key={item.time || idx} className="flex items-center space-x-4 p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-300">
+                    <div className={`p-3 rounded-2xl ${item.type === 'palm_registration' || item.type === 'palm_manual_scan' ? 'bg-electric-blue/20' : item.amount > 0 ? 'bg-fintech-green/20' : 'bg-red-400/20'}`}>
+                      {item.type === 'palm_registration' || item.type === 'palm_manual_scan' ? (
+                        <Hand className="w-5 h-5 text-electric-blue" />
+                      ) : (
+                        <Hand className={`w-5 h-5 ${item.amount > 0 ? 'text-fintech-green' : 'text-red-400'}`} />
+                      )}
                     </div>
                     <div className="flex-1">
-                      <p className="text-white font-ultralight">Transaction #{item.txid?.slice(0, 8)}</p>
-                      <p className="text-white/50 font-ultralight text-sm">{new Date(item.created_at).toLocaleDateString()}</p>
+                      <p className="text-white font-ultralight">
+                        {item.type === 'palm_registration' && 'Palm Registered'}
+                        {item.type === 'palm_manual_scan' && `Manual Palm Scan (${item.status})`}
+                        {item.type !== 'palm_registration' && item.type !== 'palm_manual_scan' && `Transaction #${item.txid?.slice(0, 8)}`}
+                      </p>
+                      <p className="text-white/50 font-ultralight text-sm">{item.time ? new Date(item.time).toLocaleString() : item.created_at ? new Date(item.created_at).toLocaleString() : ''}</p>
+                      {item.similarity !== undefined && (
+                        <p className="text-white/50 font-ultralight text-xs">Similarity: {item.similarity?.toFixed(1)}%</p>
+                      )}
                     </div>
                     <div className="text-right">
-                      <p className={`font-ultralight ${item.amount > 0 ? 'text-fintech-green' : 'text-white'}`}>
-                        {item.amount > 0 ? '+' : ''}₹{Math.abs(item.amount).toLocaleString()}
-                      </p>
-                      <p className="text-fintech-green font-ultralight text-xs">Completed</p>
+                      {item.type === 'palm_registration' && <span className="text-neon-green font-ultralight text-xs">Completed</span>}
+                      {item.type === 'palm_manual_scan' && (
+                        <span className={`font-ultralight text-xs ${item.status === 'success' ? 'text-neon-green' : 'text-red-400'}`}>{item.status === 'success' ? 'Success' : 'Fail'}</span>
+                      )}
+                      {item.type !== 'palm_registration' && item.type !== 'palm_manual_scan' && (
+                        <>
+                          <p className={`font-ultralight ${item.amount > 0 ? 'text-fintech-green' : 'text-white'}`}>{item.amount > 0 ? '+' : ''}₹{Math.abs(item.amount).toLocaleString()}</p>
+                          <p className="text-fintech-green font-ultralight text-xs">Completed</p>
+                        </>
+                      )}
                     </div>
                   </div>
                 ))
