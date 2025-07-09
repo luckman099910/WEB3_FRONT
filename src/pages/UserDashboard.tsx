@@ -215,35 +215,56 @@ const UserDashboard = () => {
               </div>
             </motion.div>
 
-            {/* Recent Transactions */}
+            {/* Recent History (10 most recent) */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
               className="p-6 rounded-3xl bg-white/5 backdrop-blur-xl border border-white/10"
             >
-              <h3 className="text-xl font-ultralight text-white mb-4">Recent Transactions</h3>
+              <h3 className="text-xl font-ultralight text-white mb-4">Recent History</h3>
               <div className="space-y-3">
-                {Array.isArray(userData?.transactions) && userData.transactions.length > 0 ? (
-                  userData.transactions.slice(0, 3).map((transaction: any, index: number) => (
-                    <div key={transaction.txid || index} className="flex items-center space-x-4 p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-300">
-                      <div className={`p-3 rounded-2xl ${transaction.amount > 0 ? 'bg-fintech-green/20' : 'bg-red-400/20'}`}>
-                        <Hand className={`w-5 h-5 ${transaction.amount > 0 ? 'text-fintech-green' : 'text-red-400'}`} />
+                {Array.isArray(userData?.user?.user_history) && userData.user.user_history.length > 0 ? (
+                  [...userData.user.user_history]
+                    .sort((a, b) => new Date(b.time || b.created_at).getTime() - new Date(a.time || a.created_at).getTime())
+                    .slice(0, 10)
+                    .map((item, idx) => (
+                      <div key={item.time || item.txid || idx} className="flex items-center space-x-4 p-4 pt-3 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-300">
+                        <div className={`p-3 rounded-2xl ${item.type === 'palm_registration' || item.type === 'palm_manual_scan' ? 'bg-electric-blue/20' : item.amount > 0 ? 'bg-fintech-green/20' : 'bg-red-400/20'}`}> 
+                          {item.type === 'palm_registration' || item.type === 'palm_manual_scan' ? (
+                            <Hand className="w-5 h-5 text-electric-blue" />
+                          ) : (
+                            <Hand className={`w-5 h-5 ${item.amount > 0 ? 'text-fintech-green' : 'text-red-400'}`} />
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-white font-ultralight">
+                            {item.type === 'palm_registration' && 'Palm Registered'}
+                            {item.type === 'palm_manual_scan' && `Manual Palm Scan (${item.status})`}
+                            {item.type !== 'palm_registration' && item.type !== 'palm_manual_scan' && `Transaction #${item.txid?.slice(0, 8)}`}
+                          </p>
+                          <p className="text-white/50 font-ultralight text-sm">{item.time ? new Date(item.time).toLocaleString() : item.created_at ? new Date(item.created_at).toLocaleString() : ''}</p>
+                          {item.similarity !== undefined && (
+                            <p className="text-white/50 font-ultralight text-xs">Similarity: {item.similarity?.toFixed(1)}%</p>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          {item.type === 'palm_registration' && <span className="text-neon-green font-ultralight text-xs">Completed</span>}
+                          {item.type === 'palm_manual_scan' && (
+                            <span className={`font-ultralight text-xs ${item.status === 'success' ? 'text-neon-green' : 'text-red-400'}`}>{item.status === 'success' ? 'Success' : 'Fail'}</span>
+                          )}
+                          {item.type !== 'palm_registration' && item.type !== 'palm_manual_scan' && (
+                            <>
+                              <p className={`font-ultralight ${item.amount > 0 ? 'text-fintech-green' : 'text-white'}`}>{item.amount > 0 ? '+' : ''}₹{Math.abs(item.amount).toLocaleString()}</p>
+                              <p className="text-fintech-green font-ultralight text-xs">Completed</p>
+                            </>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex-1">
-                        <p className="text-white font-ultralight">Transaction #{transaction.txid?.slice(0, 8)}</p>
-                        <p className="text-white/50 font-ultralight text-sm">{new Date(transaction.created_at).toLocaleDateString()}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className={`font-ultralight ${transaction.amount > 0 ? 'text-fintech-green' : 'text-white'}`}>
-                          {transaction.amount > 0 ? '+' : ''}	{Math.abs(transaction.amount).toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
-                  ))
+                    ))
                 ) : (
                   <div className="text-center py-8">
-                    <p className="text-white/50 font-ultralight">No transactions found.</p>
+                    <p className="text-white/50 font-ultralight">No history found.</p>
                   </div>
                 )}
               </div>
@@ -266,7 +287,7 @@ const UserDashboard = () => {
                 <div className="text-white/50 text-center py-8">No history yet.</div>
               ) : (
                 history.map((item, idx) => (
-                  <div key={item.time || idx} className="flex items-center space-x-4 p-4 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-300">
+                  <div key={item.time || idx} className="flex items-center space-x-4 p-4 pt-3 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-300">
                     <div className={`p-3 rounded-2xl ${item.type === 'palm_registration' || item.type === 'palm_manual_scan' ? 'bg-electric-blue/20' : item.amount > 0 ? 'bg-fintech-green/20' : 'bg-red-400/20'}`}>
                       {item.type === 'palm_registration' || item.type === 'palm_manual_scan' ? (
                         <Hand className="w-5 h-5 text-electric-blue" />
