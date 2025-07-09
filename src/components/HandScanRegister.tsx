@@ -99,7 +99,7 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
 
     ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
     
-    // Draw guide box
+    // Draw guide box (only top and left sides)
     ctx.save();
     let boxColor = '#ff4d4d';
     if (handInBox && progress < 1) boxColor = '#00CFFF'; // blue while timing
@@ -107,7 +107,16 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
     ctx.strokeStyle = boxColor;
     ctx.lineWidth = 4;
     ctx.setLineDash([8, 6]);
-    ctx.strokeRect(GUIDE_BOX.x, GUIDE_BOX.y, GUIDE_BOX.w, GUIDE_BOX.h);
+    // Top side
+    ctx.beginPath();
+    ctx.moveTo(GUIDE_BOX.x, GUIDE_BOX.y);
+    ctx.lineTo(GUIDE_BOX.x + GUIDE_BOX.w, GUIDE_BOX.y);
+    ctx.stroke();
+    // Left side
+    ctx.beginPath();
+    ctx.moveTo(GUIDE_BOX.x, GUIDE_BOX.y);
+    ctx.lineTo(GUIDE_BOX.x, GUIDE_BOX.y + GUIDE_BOX.h);
+    ctx.stroke();
     ctx.restore();
     
     // Draw hand skeleton
@@ -391,7 +400,9 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
           setCurrentLandmarks(results.multiHandLandmarks[0]);
           const inBox = isHandInBox(results.multiHandLandmarks[0]);
           setHandInBox(inBox);
-          // console.log('[PalmPay] Hand detected:', results.multiHandLandmarks[0]);
+          // Print normalized landmarks every frame
+          const norm = normalizeLandmarks(results.multiHandLandmarks[0]);
+          console.log('[PalmPay] SCAN value (normalized landmarks):', norm);
         } else {
           setCurrentLandmarks(null);
           setHandInBox(false);
