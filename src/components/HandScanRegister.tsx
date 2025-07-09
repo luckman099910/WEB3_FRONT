@@ -456,13 +456,13 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
                     <Loader2 size={16} className="animate-spin" />
                     Registering...
                   </>
-                ) : (
-                  <>
+        ) : (
+          <>
                     <CameraIcon size={16} />
                     Register Palm
                   </>
                 )}
-              </button>
+            </button>
             ) : (
               <button
                 onClick={handleRescan}
