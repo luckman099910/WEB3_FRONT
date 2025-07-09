@@ -25,6 +25,14 @@ export const getDashboard = (userId: string) =>
 export const getMerchantPayments = (merchantId: string) =>
   api.get(`/api/merchant/payments`, { params: { merchantId } });
 
+export const registerPalmHash = async (userId: string, handinfo: string) => {
+  return api.post('/api/registerPalm', { userId, handinfo });
+};
+
+export const verifyPalmHash = async (userId: string, handinfo: string) => {
+  return api.post('/api/verifyPalm', { userId, handinfo });
+};
+
 // Add other API methods as needed, using the centralized 'api' instance 
 
 // Utility for safe JSON parsing

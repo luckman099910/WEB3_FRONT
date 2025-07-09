@@ -1,12 +1,15 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Loader2, CheckCircle, AlertCircle, RotateCcw, Camera, X } from 'lucide-react';
+import { Loader2, CheckCircle, AlertCircle, RotateCcw, Camera, X, ArrowLeft } from 'lucide-react';
 import { api } from '../api/palmPayApi';
 import { safeJsonParse } from '../api/palmPayApi';
+import { registerPalmHash } from '../api/palmPayApi';
 // @ts-ignore
 import { Hands } from '@mediapipe/hands';
 // @ts-ignore
 import { drawConnectors, drawLandmarks } from '@mediapipe/drawing_utils';
+import { useNavigate } from 'react-router-dom';
+import CryptoJS from 'crypto-js';
 
 const INSPECTION_TIME = 4000; // ms
 const FRAME_COLOR = '#00FFAA';
@@ -16,6 +19,8 @@ const DOT_RADIUS = 6;
 const SCAN_LINE_COLOR = '#00FFAA';
 const SCAN_LINE_WIDTH = 3;
 const FRAME_ANIMATION_DURATION = 500; // ms
+const STEADY_TIME = 4000; // ms (4 seconds steady)
+const GUIDE_BOX = { x: 60, y: 30, w: 360, h: 240 };
 
 interface HandScanRegisterProps {
   onCancel?: () => void;
@@ -38,6 +43,11 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
   const [scanLineY, setScanLineY] = useState(0);
   const [frameColor, setFrameColor] = useState(FRAME_COLOR);
   const [framePulse, setFramePulse] = useState(false);
+  const [steadyStart, setSteadyStart] = useState<number | null>(null);
+  const [scanProgress, setScanProgress] = useState(0);
+  const [scanComplete, setScanComplete] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   // Start camera
   const startCamera = async () => {
@@ -77,6 +87,9 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
     setScanLineY(0);
     setFrameColor(FRAME_COLOR);
     setFramePulse(false);
+    setSteadyStart(null);
+    setScanProgress(0);
+    setScanComplete(false);
     if (onCancel) onCancel();
   };
 
@@ -99,6 +112,47 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
       setScanLineY(0);
     }
   }, [scanning, handInRegion]);
+
+  // Normalize landmarks for stable hash
+  function normalizeLandmarks(landmarks: any[]) {
+    const base = landmarks[0]; // wrist
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const p of landmarks) {
+      minX = Math.min(minX, p.x);
+      minY = Math.min(minY, p.y);
+      maxX = Math.max(maxX, p.x);
+      maxY = Math.max(maxY, p.y);
+    }
+    const size = Math.max(maxX - minX, maxY - minY) || 1;
+    return landmarks.map(p => ({
+      x: parseFloat(((p.x - base.x) / size).toFixed(4)),
+      y: parseFloat(((p.y - base.y) / size).toFixed(4)),
+      z: parseFloat(((p.z - base.z) / size).toFixed(4))
+    }));
+  }
+
+  // Hash function
+  function hashPalm(landmarks: any[]) {
+    const norm = normalizeLandmarks(landmarks);
+    const json = JSON.stringify(norm);
+    return CryptoJS.SHA256(json).toString();
+  }
+
+  // Check if all landmarks are inside the guide box
+  function isHandInBox(landmarks: any[]) {
+    if (!landmarks) return false;
+    for (const p of landmarks) {
+      const x = p.x * 480;
+      const y = p.y * 360;
+      if (
+        x < GUIDE_BOX.x + 4 ||
+        x > GUIDE_BOX.x + GUIDE_BOX.w - 4 ||
+        y < GUIDE_BOX.y + 4 ||
+        y > GUIDE_BOX.y + GUIDE_BOX.h - 4
+      ) return false;
+    }
+    return true;
+  }
 
   // Hand detection setup
   useEffect(() => {
@@ -192,28 +246,67 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
       ctx?.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
       // Always draw the neon frame
       drawFrame(ctx, canvasRef.current.width, canvasRef.current.height);
+      // Draw guide box
+      ctx.save();
+      ctx.strokeStyle = handInRegion ? '#2dff7a' : '#ff4d4d';
+      ctx.lineWidth = 4;
+      ctx.setLineDash([8, 6]);
+      ctx.strokeRect(GUIDE_BOX.x, GUIDE_BOX.y, GUIDE_BOX.w, GUIDE_BOX.h);
+      ctx.restore();
+      // Draw hand landmarks as dots
       if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
         const handLandmarks = results.multiHandLandmarks[0];
         setLandmarks(handLandmarks);
-        // Debug: Output hand scan result to console
-        console.log('[HandScan] Landmarks:', handLandmarks);
-        // Draw landmarks and connectors (optional, can comment out for just dots)
-        // drawConnectors(ctx, handLandmarks, Hands.HAND_CONNECTIONS, { color: '#00FFAA', lineWidth: 4 });
-        // drawLandmarks(ctx, handLandmarks, { color: '#00FFAA', lineWidth: 2 });
-        // Draw glowing dots for each landmark
-        drawLandmarkDots(ctx, handLandmarks);
-        // Check if all points are within the central region
-        const confined = handLandmarks.every((pt: any) =>
-          pt.x > 0.1 && pt.x < 0.9 && pt.y > 0.1 && pt.y < 0.9
-        );
-        setHandInRegion(confined);
-        // If scanning and hand is in region, draw scanning line
-        if (scanning && confined) {
-          drawScanLine(ctx, scanLineY, canvasRef.current.width);
+        const inBox = isHandInBox(handLandmarks);
+        setHandInRegion(inBox);
+        // Draw dots
+        ctx.save();
+        ctx.fillStyle = '#2d8cff';
+        handLandmarks.forEach(pt => {
+          const x = pt.x * 480;
+          const y = pt.y * 360;
+          ctx.beginPath();
+          ctx.arc(x, y, 6, 0, 2 * Math.PI);
+          ctx.fill();
+        });
+        ctx.restore();
+        // Steady hand logic
+        if (inBox) {
+          if (!steadyStart) setSteadyStart(Date.now());
+          const progress = Math.min(1, (Date.now() - (steadyStart || 0)) / STEADY_TIME);
+          setScanProgress(progress);
+          if (progress === 1 && !scanComplete) {
+            setScanComplete(true);
+            // Generate hash and call API
+            const hash = hashPalm(handLandmarks);
+            const user = safeJsonParse(localStorage.getItem('user'), {});
+            if (!user || !user.id) {
+              setError('User not logged in');
+              return;
+            }
+            setLoading(true);
+            registerPalmHash(user.id, hash)
+              .then(() => {
+                setSuccess(true);
+                setError('');
+              })
+              .catch((err) => {
+                setError(err.response?.data?.message || 'Palm registration failed.');
+                setSuccess(false);
+              })
+              .finally(() => setLoading(false));
+          }
+        } else {
+          setSteadyStart(null);
+          setScanProgress(0);
+          setScanComplete(false);
         }
       } else {
         setLandmarks([]);
         setHandInRegion(false);
+        setSteadyStart(null);
+        setScanProgress(0);
+        setScanComplete(false);
       }
     };
 
@@ -225,7 +318,7 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
       if (hands && hands.close) hands.close();
     };
     // eslint-disable-next-line
-  }, [cameraReady, frameColor, framePulse, scanLineY, scanning]);
+  }, [cameraReady]);
 
   // Animate frame color based on handInRegion
   useEffect(() => {
@@ -345,13 +438,28 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
     // eslint-disable-next-line
   }, []);
 
+  // UI: show progress bar, guide box, and feedback
   return (
-    <div className="w-full flex justify-center items-center min-h-[70vh]">
+    <motion.div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
       <div className="p-12 rounded-3xl bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl border border-white/20 max-w-2xl w-full flex flex-col items-center shadow-2xl">
-        <h2 className="text-4xl font-light text-primary mb-10 text-center">Palm Registration</h2>
-        {/* Registration UI always shown */}
-        {error && (
-          <div className="mb-6 text-red-500 flex items-center gap-2 justify-center text-lg"><AlertCircle /> {error}</div>
+        <div className="w-full flex items-center justify-between mb-8">
+          <button
+            onClick={() => onCancel ? onCancel() : navigate(-1)}
+            className="flex items-center gap-2 text-white/70 hover:text-white transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            Back
+          </button>
+          <h2 className="text-3xl font-light text-primary text-center flex-1">Palm Scan & Register</h2>
+          <div style={{ width: 60 }} />
+        </div>
+        {/* Camera and scan UI here, progress bar, guide box, etc. */}
+        {/* Show feedback for scan/registration */}
+        {success && (
+          <div className="mb-6 text-green-400 text-center text-lg">Palm registered successfully!</div>
+        )}
+        {error && !success && (
+          <div className="mb-6 text-red-400 text-center text-lg">{error}</div>
         )}
         {success ? (
           <div className="flex flex-col items-center">
@@ -407,7 +515,7 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
           </>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 };
 
