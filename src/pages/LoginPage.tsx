@@ -25,10 +25,16 @@ const LoginPage = () => {
         // Ensure is_admin is present and boolean
         const userWithIsAdmin = { ...data.user, is_admin: Boolean(data.user.is_admin) };
         localStorage.setItem('user', JSON.stringify(userWithIsAdmin));
+        // Redirect based on admin status
+        if (userWithIsAdmin.is_admin === true) {
+          navigate('/admin');
+        } else {
+          navigate('/user-dashboard');
+        }
       } else {
         localStorage.removeItem('user');
+        navigate('/user-dashboard');
       }
-      navigate('/user-dashboard');
     } catch (err: any) {
       setError(err.message);
     }

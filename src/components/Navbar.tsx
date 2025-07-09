@@ -9,6 +9,7 @@ const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const isLoggedIn = Boolean(localStorage.getItem('user'));
+  const user = isLoggedIn ? JSON.parse(localStorage.getItem('user') || 'null') : null;
 
   const handleLogout = () => {
     localStorage.removeItem('user');
@@ -55,10 +56,10 @@ const Navbar = () => {
             {isLoggedIn ? (
               <>
                 <button
-                  onClick={() => navigate('/user-dashboard')}
+                  onClick={() => navigate(user && user.is_admin === true ? '/admin' : '/user-dashboard')}
                   className="flex items-center space-x-2 px-6 py-3 rounded-full btn-primary group animate-glow bg-blue-500/80 hover:bg-blue-600 transition-colors"
                 >
-                  <span>User Page</span>
+                  <span>{user && user.is_admin === true ? 'Admin Page' : 'User Page'}</span>
                 </button>
                 <button
                   onClick={handleLogout}
@@ -116,10 +117,10 @@ const Navbar = () => {
             {isLoggedIn ? (
               <>
                 <button
-                  onClick={() => { setIsOpen(false); navigate('/user-dashboard'); }}
+                  onClick={() => { setIsOpen(false); navigate(user && user.is_admin === true ? '/admin' : '/user-dashboard'); }}
                   className="flex items-center space-x-2 px-6 py-3 rounded-full btn-primary group w-fit animate-glow bg-blue-500/80 hover:bg-blue-600 transition-colors mb-2"
                 >
-                  <span>User Page</span>
+                  <span>{user && user.is_admin === true ? 'Admin Page' : 'User Page'}</span>
                 </button>
                 <button
                   onClick={() => { setIsOpen(false); handleLogout(); }}

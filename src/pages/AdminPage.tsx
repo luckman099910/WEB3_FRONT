@@ -17,21 +17,13 @@ import {
 import { useNavigate } from 'react-router-dom';
 import AdminBalanceManager from '../components/AdminBalanceManager';
 import logo from '../assets/palmpay-logo.png';
-import { Tabs, Tab } from '@mui/material'; // If not installed, replace with custom tab logic or Tailwind
 import { getUsers, assignBalance } from '../api/adminApi';
 import { getApplicants } from '../api/applicantsApi';
 import { api } from '../api/palmPayApi';
 
 const AdminPage = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [selectedRole, setSelectedRole] = useState('admin');
-  const [showBalanceManager, setShowBalanceManager] = useState(false);
-  const [loginForm, setLoginForm] = useState({
-    email: '',
-    password: ''
-  });
   const [tabIndex, setTabIndex] = useState(0);
-  const [users, setUsers] = useState([]);
+  const [users, setUsers] = useState<any[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [usersError, setUsersError] = useState('');
   const [applicants, setApplicants] = useState([]);
@@ -61,7 +53,7 @@ const AdminPage = () => {
       setUsersLoading(true);
       setUsersError('');
       getUsers()
-        .then((res) => setUsers(res.data?.users || res.users || []))
+        .then((res) => setUsers(res.data?.users || []))
         .catch((err) => setUsersError(err.message || 'Failed to load users'))
         .finally(() => setUsersLoading(false));
     }
@@ -85,7 +77,7 @@ const AdminPage = () => {
       setTransactionsLoading(true);
       setTransactionsError('');
       api.get('/api/transaction')
-        .then((res) => setTransactions(res.data?.transactions || res.transactions || []))
+        .then((res) => setTransactions(res.data?.transactions || []))
         .catch((err) => setTransactionsError(err.message || 'Failed to load transactions'))
         .finally(() => setTransactionsLoading(false));
     }
@@ -103,24 +95,11 @@ const AdminPage = () => {
       setSendValueUser('');
       setSendValueAmount('');
       // Refresh users
-      getUsers().then((res) => setUsers(res.data?.users || res.users || []));
+      getUsers().then((res) => setUsers(res.data?.users || []));
     } catch (err: any) {
       setSendValueError(err.message || 'Failed to send value');
     } finally {
       setSendValueLoading(false);
-    }
-  };
-
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Simulate login
-    setIsLoggedIn(true);
-    
-    // Redirect based on role
-    if (selectedRole === 'user') {
-      navigate('/user-dashboard');
-    } else if (selectedRole === 'merchant') {
-      navigate('/store-dashboard');
     }
   };
 
@@ -197,125 +176,15 @@ const AdminPage = () => {
     await api.delete(`/api/applicants/${applicantId}`);
   };
 
-  if (showBalanceManager) {
-    return (
-      <div className="min-h-screen flex items-center justify-center py-20">
-        <AdminBalanceManager 
-          onSuccess={() => setShowBalanceManager(false)}
-        />
-      </div>
-    );
-  }
-
-  if (!isLoggedIn) {
-    return (
-      <div className="min-h-screen flex items-center justify-center py-20">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.8 }}
-          className="w-full max-w-md"
-        >
-          <div className="p-8 rounded-3xl bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl border border-white/20">
-            {/* Logo */}
-            <div className="text-center mb-8">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-fintech-green to-electric-blue mb-4 animate-pulse-glow">
-                <img src={logo} alt="PalmPay Logo" className="h-12 w-auto rounded-full bg-black" />
-              </div>
-              <h1 className="text-2xl font-ultralight text-white">PalmPay Admin</h1>
-              <p className="text-white/70 font-ultralight">Secure access portal</p>
-            </div>
-
-            {/* Role Selection */}
-            <div className="mb-6">
-              <label className="block text-sm font-ultralight text-white/70 mb-3">Access Level</label>
-              <div className="grid grid-cols-3 gap-2">
-                {['admin', 'merchant', 'user'].map((role) => (
-                  <button
-                    key={role}
-                    onClick={() => setSelectedRole(role)}
-                    className={`px-4 py-2 rounded-2xl text-sm font-ultralight transition-all duration-300 ${
-                      selectedRole === role
-                        ? 'bg-gradient-to-r from-fintech-green to-electric-blue text-black'
-                        : 'bg-white/10 text-white/70 hover:bg-white/20'
-                    }`}
-                  >
-                    {role.charAt(0).toUpperCase() + role.slice(1)}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Login Form */}
-            <form onSubmit={handleLogin} className="space-y-6">
-              <div>
-                <label className="block text-sm font-ultralight text-white/70 mb-2">Email / Phone</label>
-                <input
-                  type="text"
-                  value={loginForm.email}
-                  onChange={(e) => setLoginForm({...loginForm, email: e.target.value})}
-                  className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/20 text-white placeholder-white/50 focus:outline-none focus:border-fintech-green/50 backdrop-blur-sm transition-all duration-300 font-ultralight"
-                  placeholder="admin@palmpay.com"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-ultralight text-white/70 mb-2">Password</label>
-                <input
-                  type="password"
-                  value={loginForm.password}
-                  onChange={(e) => setLoginForm({...loginForm, password: e.target.value})}
-                  className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/20 text-white placeholder-white/50 focus:outline-none focus:border-fintech-green/50 backdrop-blur-sm transition-all duration-300 font-ultralight"
-                  placeholder="••••••••"
-                  required
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="w-full flex items-center justify-center space-x-2 px-6 py-3 rounded-full bg-gradient-to-r from-fintech-green to-electric-blue text-black font-medium hover:shadow-lg hover:shadow-fintech-green/25 transition-all duration-300 group animate-glow"
-              >
-                <Fingerprint className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                <span>Login</span>
-              </button>
-            </form>
-
-            {/* Security Notice */}
-            <div className="mt-6 p-4 rounded-2xl bg-yellow-400/10 border border-yellow-400/20">
-              <div className="flex items-center space-x-2">
-                <AlertCircle className="w-5 h-5 text-yellow-400" />
-                <span className="text-sm text-yellow-400 font-ultralight">
-                  Demo Mode: Use any email/password
-                </span>
-              </div>
-            </div>
-          </div>
-        </motion.div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen py-20">
+    <div className="min-h-screen flex flex-col items-center pt-20">
       {/* Header */}
-      <section className="mb-8">
-        <div className="flex items-center justify-between max-w-3xl mx-auto px-4">
-          <div className="flex items-center gap-3">
-            <img src={logo} alt="PalmPay Logo" className="h-10 w-10 rounded-full bg-black" />
-            <h1 className="text-2xl font-bold text-white">Admin Dashboard</h1>
-          </div>
-          <button
-            onClick={() => navigate('/user-dashboard')}
-            className="px-4 py-2 rounded-full bg-gradient-to-r from-fintech-green to-electric-blue text-black font-medium hover:shadow-lg hover:shadow-fintech-green/25 transition-all duration-300"
-          >
-            User Page
-          </button>
-        </div>
+      <section className="mb-4 w-full flex flex-col items-center">
+        <h1 className="text-3xl font-bold text-white">Admin Dashboard</h1>
       </section>
       {/* Tabs */}
-      <div className="max-w-3xl mx-auto px-4">
-        <div className="flex border-b border-electric-blue/30 mb-6">
+      <div className="w-full max-w-3xl flex flex-col items-center">
+        <div className="flex border-b border-electric-blue/30 mb-6 w-full justify-center">
           {tabList.map((tab, idx) => (
             <button
               key={tab.label}
@@ -332,7 +201,7 @@ const AdminPage = () => {
           ))}
         </div>
         {/* Tab Content */}
-        <div className="bg-card-bg rounded-xl shadow-xl p-6 min-h-[400px]">
+        <div className="bg-card-bg rounded-xl shadow-xl p-6 min-h-[400px] w-full">
           {tabIndex === 0 && (
             <div>
               <h2 className="text-xl font-bold mb-4">All Users</h2>
@@ -383,42 +252,44 @@ const AdminPage = () => {
           {tabIndex === 1 && (
             <div>
               <h2 className="text-xl font-bold mb-4">Send Value</h2>
-              <form onSubmit={handleSendValue} className="space-y-4 max-w-md">
-                <div>
+              <form onSubmit={handleSendValue} className="space-y-4 flex flex-col items-center justify-center w-full max-w-lg mx-auto">
+                <div className="w-full">
                   <label className="block text-sm text-white/70 mb-2">Select User</label>
                   <select
                     value={sendValueUser}
                     onChange={(e) => setSendValueUser(e.target.value)}
-                    className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/20 text-white focus:outline-none"
+                    className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/20 text-white focus:outline-none text-lg"
                     required
                   >
                     <option value="">-- Select a user --</option>
-                    {users.map((u: any) => (
-                      <option key={u.id} value={u.id}>{u.username || u.email}</option>
+                    {users.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.username || u.email}
+                      </option>
                     ))}
                   </select>
                 </div>
-                <div>
+                <div className="w-full">
                   <label className="block text-sm text-white/70 mb-2">Amount</label>
                   <input
                     type="number"
                     value={sendValueAmount}
                     onChange={(e) => setSendValueAmount(e.target.value)}
-                    className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/20 text-white focus:outline-none"
+                    className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/20 text-white focus:outline-none text-lg"
                     placeholder="Enter amount"
                     required
                   />
                 </div>
                 <button
                   type="submit"
-                  className="w-full px-6 py-3 rounded-full btn-primary animate-glow font-medium"
+                  className="w-full px-6 py-4 rounded-full btn-primary animate-glow font-medium text-lg"
                   disabled={sendValueLoading}
                 >
                   {sendValueLoading ? 'Sending...' : 'Send Value'}
                 </button>
-                {sendValueError && <div className="text-red-400 mt-2">{sendValueError}</div>}
-                {sendValueSuccess && <div className="text-green-400 mt-2">{sendValueSuccess}</div>}
               </form>
+              {sendValueError && <div className="mt-2 text-red-500 text-center">{sendValueError}</div>}
+              {sendValueSuccess && <div className="mt-2 text-green-500 text-center">{sendValueSuccess}</div>}
             </div>
           )}
           {tabIndex === 2 && (
