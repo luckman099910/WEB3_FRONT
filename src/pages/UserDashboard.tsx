@@ -287,7 +287,7 @@ const UserDashboard = () => {
                 <div className="text-white/50 text-center py-8">No history yet.</div>
               ) : (
                 history.map((item, idx) => (
-                  <div key={item.time || idx} className="flex items-center space-x-4 p-4 pt-3 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-300">
+                  <div key={item.time || idx} className="flex items-center space-x-4 p-4 pt-3 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-300" style={{marginBottom:"15px"}}>
                     <div className={`p-3 rounded-2xl ${item.type === 'palm_registration' || item.type === 'palm_manual_scan' ? 'bg-electric-blue/20' : item.amount > 0 ? 'bg-fintech-green/20' : 'bg-red-400/20'}`}>
                       {item.type === 'palm_registration' || item.type === 'palm_manual_scan' ? (
                         <Hand className="w-5 h-5 text-electric-blue" />
