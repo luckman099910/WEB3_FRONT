@@ -30,6 +30,7 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
   const [cameraReady, setCameraReady] = useState(false);
   const [cameraDevices, setCameraDevices] = useState<MediaDeviceInfo[]>([]);
   const [currentStream, setCurrentStream] = useState<MediaStream | null>(null);
+  const [handsReady, setHandsReady] = useState(false);
   
   // MediaPipe instances
   const handsRef = useRef<any>(null);
@@ -308,11 +309,15 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
     }
   };
 
-  // Initialize MediaPipe Hands
+  // HTML-style: Only start scan after both scripts are loaded and WASM is ready
   useEffect(() => {
     let isMounted = true;
-    async function loadHands() {
-      // @ts-ignore
+    let cameraInstance: any = null;
+    let handsInstance: any = null;
+    let firstResults = false;
+
+    async function setupPalmScan() {
+      // 1. Load MediaPipe Hands script
       if (!window.Hands) {
         await new Promise((resolve, reject) => {
           const script = document.createElement('script');
@@ -323,45 +328,92 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
           document.body.appendChild(script);
         });
       }
-      // @ts-ignore
-      const HandsClass = window.Hands;
-      if (isMounted && HandsClass) {
-        handsRef.current = new HandsClass({
-          locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+      // 2. Load MediaPipe Camera script
+      if (!window.Camera) {
+        await new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js';
+          script.async = true;
+          script.onload = resolve;
+          script.onerror = reject;
+          document.body.appendChild(script);
         });
-        handsRef.current.setOptions({
-          maxNumHands: 1,
-          modelComplexity: 1,
-          minDetectionConfidence: 0.7,
-          minTrackingConfidence: 0.7
+      }
+      // 3. Get camera devices
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(d => d.kind === 'videoinput');
+      if (!isMounted) return;
+      setCameraDevices(videoDevices);
+      // 4. Start camera with first device
+      const deviceId = videoDevices[0]?.deviceId;
+      const constraints = {
+        video: {
+          deviceId: deviceId ? { exact: deviceId } : undefined,
+          width: { ideal: 400 },
+          height: { ideal: 300 }
+        },
+        audio: false
+      };
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      setCurrentStream(stream);
+      setCameraReady(true);
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+      // 5. Setup MediaPipe Hands
+      const HandsClass = (window as any).Hands;
+      handsInstance = new HandsClass({
+        locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+      });
+      handsInstance.setOptions({
+        maxNumHands: 1,
+        modelComplexity: 1,
+        minDetectionConfidence: 0.7,
+        minTrackingConfidence: 0.7
+      });
+      handsInstance.onResults((results: any) => {
+        if (!firstResults) {
+          setHandsReady(true);
+          firstResults = true;
+          console.log('[PalmPay] MediaPipe Hands model loaded and first results received.');
+        }
+        if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+          setCurrentLandmarks(results.multiHandLandmarks[0]);
+          const inBox = isHandInBox(results.multiHandLandmarks[0]);
+          setHandInBox(inBox);
+          // console.log('[PalmPay] Hand detected:', results.multiHandLandmarks[0]);
+        } else {
+          setCurrentLandmarks(null);
+          setHandInBox(false);
+        }
+        drawOverlay(results.multiHandLandmarks?.[0], handInBox, progress);
+      });
+      handsRef.current = handsInstance;
+      // 6. Start MediaPipe Camera
+      const CameraClass = (window as any).Camera;
+      if (videoRef.current && CameraClass) {
+        cameraInstance = new CameraClass(videoRef.current, {
+          onFrame: async () => {
+            if (handsInstance && videoRef.current) {
+              await handsInstance.send({ image: videoRef.current });
+            }
+          },
+          width: 400,
+          height: 300
         });
-        handsRef.current.onResults(onResults);
+        cameraInstance.start();
+        cameraRef.current = cameraInstance;
+        console.log('[PalmPay] Camera started.');
       }
     }
-    loadHands();
+    setupPalmScan();
     return () => {
       isMounted = false;
-      if (handsRef.current) {
-        handsRef.current.close();
-      }
+      if (cameraInstance) cameraInstance.stop();
+      if (handsInstance) handsInstance.close();
+      if (currentStream) currentStream.getTracks().forEach(track => track.stop());
     };
-  }, []);
-
-  // Initialize camera and canvas
-  useEffect(() => {
-    resizeCanvas();
-    updateCameraList();
-    
-    // Listen for device changes
-    if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) {
-      navigator.mediaDevices.addEventListener('devicechange', updateCameraList);
-    }
-    
-    return () => {
-      if (navigator.mediaDevices && navigator.mediaDevices.removeEventListener) {
-        navigator.mediaDevices.removeEventListener('devicechange', updateCameraList);
-      }
-    };
+    // eslint-disable-next-line
   }, []);
 
   // Update progress effect
