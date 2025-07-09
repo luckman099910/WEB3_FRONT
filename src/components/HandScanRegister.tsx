@@ -99,24 +99,15 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
 
     ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
     
-    // Draw guide box (only top and left sides)
+    // Draw guide box (fully closed, thin border)
     ctx.save();
     let boxColor = '#ff4d4d';
     if (handInBox && progress < 1) boxColor = '#00CFFF'; // blue while timing
     if (handInBox && progress >= 1) boxColor = '#00FFB2'; // green when ready
     ctx.strokeStyle = boxColor;
-    ctx.lineWidth = 4;
-    ctx.setLineDash([8, 6]);
-    // Top side
-    ctx.beginPath();
-    ctx.moveTo(GUIDE_BOX.x, GUIDE_BOX.y);
-    ctx.lineTo(GUIDE_BOX.x + GUIDE_BOX.w, GUIDE_BOX.y);
-    ctx.stroke();
-    // Left side
-    ctx.beginPath();
-    ctx.moveTo(GUIDE_BOX.x, GUIDE_BOX.y);
-    ctx.lineTo(GUIDE_BOX.x, GUIDE_BOX.y + GUIDE_BOX.h);
-    ctx.stroke();
+    ctx.lineWidth = 2; // thin border
+    ctx.setLineDash([]); // solid line
+    ctx.strokeRect(GUIDE_BOX.x, GUIDE_BOX.y, GUIDE_BOX.w, GUIDE_BOX.h);
     ctx.restore();
     
     // Draw hand skeleton
@@ -160,9 +151,11 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
   // MediaPipe callback (adapted from HTML)
   function onResults(results: any) {
     let handJustEntered = false;
+    let inBox = false;
+    let newProgress = 0;
     if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
       setCurrentLandmarks(results.multiHandLandmarks[0]);
-      const inBox = isHandInBox(results.multiHandLandmarks[0]);
+      inBox = isHandInBox(results.multiHandLandmarks[0]);
       if (inBox && !handInBox) handJustEntered = true;
       setHandInBox(inBox);
       // Print normalized landmarks every frame
@@ -174,9 +167,9 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
     }
     
     // Steady hand logic
-    if (handInBox) {
+    if (inBox) {
       if (!steadyStart || handJustEntered) setSteadyStart(Date.now());
-      const newProgress = Math.min(1, (Date.now() - (steadyStart || Date.now())) / STEADY_TIME);
+      newProgress = Math.min(1, (Date.now() - (steadyStart || Date.now())) / STEADY_TIME);
       setProgress(newProgress);
       
       // Auto-register when progress reaches 1
@@ -188,8 +181,8 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
       setProgress(0);
     }
     
-    // Draw overlay
-    drawOverlay(currentLandmarks, handInBox, progress);
+    // Draw overlay with latest computed values
+    drawOverlay(results.multiHandLandmarks?.[0], inBox, newProgress);
   }
 
   // Camera setup (adapted from HTML)
@@ -396,9 +389,11 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
           firstResults = true;
           console.log('[PalmPay] MediaPipe Hands model loaded and first results received.');
         }
+        let inBox = false;
+        let newProgress = 0;
         if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
           setCurrentLandmarks(results.multiHandLandmarks[0]);
-          const inBox = isHandInBox(results.multiHandLandmarks[0]);
+          inBox = isHandInBox(results.multiHandLandmarks[0]);
           setHandInBox(inBox);
           // Print normalized landmarks every frame
           const norm = normalizeLandmarks(results.multiHandLandmarks[0]);
@@ -407,7 +402,11 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
           setCurrentLandmarks(null);
           setHandInBox(false);
         }
-        drawOverlay(results.multiHandLandmarks?.[0], handInBox, progress);
+        if (inBox && steadyStart) {
+          newProgress = Math.min(1, (Date.now() - steadyStart) / STEADY_TIME);
+        }
+        // Draw overlay with latest computed values
+        drawOverlay(results.multiHandLandmarks?.[0], inBox, newProgress);
       });
       handsRef.current = handsInstance;
       // 6. Start MediaPipe Camera
