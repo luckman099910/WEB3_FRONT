@@ -14,9 +14,7 @@ const LoginPage = () => {
     setError('');
     try {
       const data = await login(email, password);
-      if (data.session && typeof data.session === 'string') {
-        localStorage.setItem('session', data.session);
-      } else if (data.token && typeof data.token === 'string') {
+      if (data.token && typeof data.token === 'string') {
         localStorage.setItem('session', data.token);
       } else {
         localStorage.removeItem('session');
