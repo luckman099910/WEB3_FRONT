@@ -1,7 +1,8 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Loader2, AlertCircle } from 'lucide-react';
 // @ts-ignore
-import { Camera } from '@mediapipe/camera_utils';
+// Remove direct import of Camera
+// import { Camera } from '@mediapipe/camera_utils';
 import CryptoJS from 'crypto-js';
 
 const STEADY_TIME = 3000; // ms (3 seconds steady for scan)
@@ -138,12 +139,28 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel }) => {
     handInBoxRef.current = false;
     async function setupPalmScan() {
       try {
-        // 1. Load MediaPipe Hands
-        const handsMod = await import('@mediapipe/hands');
-        const Hands = handsMod.Hands;
-        // 2. Load Camera
-        // @ts-ignore
-        const CameraClass = Camera;
+        // 1. Load MediaPipe Hands script if not present
+        if (!(window as any).Hands) {
+          await new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.min.js';
+            script.async = true;
+            script.onload = resolve;
+            script.onerror = reject;
+            document.body.appendChild(script);
+          });
+        }
+        // 2. Load MediaPipe Camera script if not present
+        if (!(window as any).Camera) {
+          await new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js';
+            script.async = true;
+            script.onload = resolve;
+            script.onerror = reject;
+            document.body.appendChild(script);
+          });
+        }
         // 3. Get camera
         const stream = await navigator.mediaDevices.getUserMedia({ video: { width: VIDEO_WIDTH, height: VIDEO_HEIGHT }, audio: false });
         setCurrentStream(stream);
@@ -153,7 +170,8 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel }) => {
           videoRef.current.srcObject = stream;
         }
         // 4. Setup MediaPipe Hands
-        handsInstance = new Hands({
+        const HandsClass = (window as any).Hands;
+        handsInstance = new HandsClass({
           locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
         });
         handsInstance.setOptions({
@@ -164,7 +182,8 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel }) => {
         });
         handsInstance.onResults(onResults);
         handsRef.current = handsInstance;
-        // 5. Start Camera
+        // 5. Start MediaPipe Camera
+        const CameraClass = (window as any).Camera;
         if (videoRef.current && CameraClass) {
           cameraInstance = new CameraClass(videoRef.current, {
             onFrame: async () => {
