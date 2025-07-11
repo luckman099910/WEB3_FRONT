@@ -23,13 +23,11 @@ import {
   CheckCircle
 } from 'lucide-react';
 import { api, safeJsonParse } from '../api/palmPayApi';
-import HandScanRegister from '../components/HandScanRegister';
 import { useNavigate } from 'react-router-dom';
 
 const UserDashboard = () => {
   const [activeTab, setActiveTab] = useState('wallet');
   const [showBalance, setShowBalance] = useState(true);
-  const [showRegistration, setShowRegistration] = useState(false);
   const [userData, setUserData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -57,11 +55,6 @@ const UserDashboard = () => {
     }
   };
 
-  const handleRegistrationSuccess = (userData: any) => {
-    setUserData(userData);
-    setShowRegistration(false);
-    loadUserDashboard(); // Refresh data
-  };
 
   const transactions = [
     {
@@ -109,13 +102,6 @@ const UserDashboard = () => {
     { id: 'rewards', label: 'Rewards', icon: Gift }
   ];
 
-  if (showRegistration) {
-    return (
-      <div className="min-h-screen flex items-center justify-center py-20">
-        <HandScanRegister onCancel={() => setShowRegistration(false)} />
-      </div>
-    );
-  }
 
   if (loading) {
     return (
@@ -193,7 +179,7 @@ const UserDashboard = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <button
                     className={`flex items-center gap-2 px-6 py-4 rounded-2xl font-medium shadow-lg hover:scale-[1.02] transition-transform duration-200 ${userData?.user?.handinfo ? 'bg-green-900/80 text-neon-green' : 'bg-gradient-to-r from-fintech-green to-electric-blue text-white'}`}
-                    onClick={() => setShowRegistration(true)}
+                    onClick={() => navigate('/palm-register')}
                   >
                     <Hand className="w-5 h-5" />
                     {userData?.user?.handinfo ? (

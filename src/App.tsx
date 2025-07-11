@@ -16,6 +16,7 @@ import ApplicantsRegisterPage from './pages/ApplicantsRegisterPage';
 import PalmRegisterPage from './pages/PalmRegisterPage';
 import TransferPage from './pages/TransferPage';
 import HistoryPage from './pages/HistoryPage';
+import ReceivePage from './pages/ReceivePage';
 import { useEffect } from 'react';
 
 function RequireAuth({ children }: { children: JSX.Element }) {
@@ -204,6 +205,18 @@ function App() {
                   transition={pageTransition}
                 >
                   <HistoryPage />
+                </motion.div>
+              } />
+              <Route path="/receive" element={
+                <motion.div
+                  key="receive"
+                  initial="initial"
+                  animate="in"
+                  exit="out"
+                  variants={pageVariants}
+                  transition={pageTransition}
+                >
+                  <ReceivePage />
                 </motion.div>
               } />
             </Routes>

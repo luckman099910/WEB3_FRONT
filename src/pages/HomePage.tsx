@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, Shield, Zap, Globe, Users, CheckCircle, Hand, Fingerprint, Coins, Link as LinkIcon, Smartphone, Star, Quote, MapPin, Search, Building, Award, Sparkles } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 const HomePage = () => {
   const features = [
@@ -83,6 +83,17 @@ const HomePage = () => {
     'PalmKiosk Infrastructure'
   ];
 
+  const navigate = useNavigate();
+  const isLoggedIn = Boolean(localStorage.getItem('user'));
+
+  const handleProtectedClick = (action: () => void) => {
+    if (!isLoggedIn) {
+      navigate('/login');
+    } else {
+      action();
+    }
+  };
+
   return (
     <div className="bg-tech-blue">
       {/* Hero Section */}
@@ -125,20 +136,35 @@ const HomePage = () => {
               </p>
               
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                <Link
-                  to="/demo"
+                {/* Palm Register Button */}
+                <button
+                  onClick={() => handleProtectedClick(() => navigate('/palm-register'))}
                   className="flex items-center space-x-2 px-8 py-4 rounded-full bg-gradient-to-r from-neon-green to-sky-blue text-tech-blue font-normal hover:neon-glow transition-all duration-300 group animate-glow"
+                  title={!isLoggedIn ? 'Please log in to register your palm' : ''}
                 >
-                  <span>Try Demo</span>
-                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                </Link>
-                <Link
-                  to="/applicants-register"
+                  <span>Palm Register</span>
+                  <Hand className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </button>
+                {/* Pay Button */}
+                <button
+                  onClick={() => handleProtectedClick(() => navigate('/transfer'))}
                   className="flex items-center space-x-2 px-8 py-4 rounded-full glass-effect text-white hover:bg-white/10 hover:border-neon-green/50 transition-all duration-300"
+                  title={!isLoggedIn ? 'Please log in to pay' : ''}
                 >
-                  <span>Join Waitlist</span>
-                </Link>
+                  <span>Pay</span>
+                  <Coins className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </button>
+                {/* Receive Button */}
+                <button
+                  onClick={() => handleProtectedClick(() => navigate('/receive'))}
+                  className="flex items-center space-x-2 px-8 py-4 rounded-full glass-effect text-white hover:bg-white/10 hover:border-neon-green/50 transition-all duration-300"
+                  title={!isLoggedIn ? 'Please log in to receive' : ''}
+                >
+                  <span>Receive</span>
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </button>
               </div>
+              {/* Palm Register Modal */}
             </motion.div>
           </div>
         </div>

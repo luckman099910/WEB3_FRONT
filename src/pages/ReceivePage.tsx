@@ -3,11 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import HandScan from '../components/HandScan';
 import { motion } from 'framer-motion';
-import { Send, Hand, ArrowLeft } from 'lucide-react';
+import { Hand, Download } from 'lucide-react';
 import axios from 'axios';
 
-const TransferPage = () => {
-  const [receiverEmail, setReceiverEmail] = useState('');
+const ReceivePage = () => {
   const [amount, setAmount] = useState('');
   const [showHandScan, setShowHandScan] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -17,17 +16,17 @@ const TransferPage = () => {
   const [showRegisterPrompt, setShowRegisterPrompt] = useState(false);
   const navigate = useNavigate();
 
+  // Get current user's email from localStorage
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const receiverEmail = user?.email || '';
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccess('');
     setStatusMsg('');
-    if (!receiverEmail || !amount) {
-      setError('Please fill in all fields.');
-      return;
-    }
-    if (parseFloat(amount) <= 0) {
-      setError('Amount must be greater than 0.');
+    if (!amount || parseFloat(amount) <= 0) {
+      setError('Please enter a valid amount.');
       return;
     }
     setShowHandScan(true);
@@ -62,15 +61,14 @@ const TransferPage = () => {
         }
       );
       const tx = res.data?.transaction;
-      setSuccess('Transfer successful!');
+      setSuccess('Remittance successful!');
       setStatusMsg(`${tx?.amount} INR was successfully transmitted from ${tx?.from_user_email} to ${tx?.to_user_email}.`);
       setAmount('');
-      setReceiverEmail('');
     } catch (err: any) {
       if (err.response?.data?.error?.includes('Sender not found')) {
         setShowRegisterPrompt(true);
       } else {
-        setError(err.response?.data?.error || 'Transfer failed. Please try again later.');
+        setError(err.response?.data?.error || 'Remittance failed. Please try again later.');
       }
     } finally {
       setLoading(false);
@@ -94,11 +92,11 @@ const TransferPage = () => {
           className="w-full max-w-md p-8 rounded-3xl glass-effect border border-white/20 shadow-xl"
         >
           <div className="text-center mb-6">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-fintech-green to-electric-blue mb-4">
-              <Send className="w-8 h-8 text-black" />
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-neon-green to-sky-blue mb-4">
+              <Download className="w-8 h-8 text-black" />
             </div>
-            <h2 className="text-2xl font-light text-white mb-2">Send Money</h2>
-            <p className="text-white/70">Transfer money securely with palm authentication</p>
+            <h2 className="text-2xl font-light text-white mb-2">Receive Money</h2>
+            <p className="text-white/70">Request a remittance to your wallet. Sender will be authenticated by palm scan.</p>
           </div>
 
           {error && (
@@ -127,18 +125,6 @@ const TransferPage = () => {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label className="block text-sm text-white/70 mb-2">Receiver Email</label>
-              <input
-                type="email"
-                value={receiverEmail}
-                onChange={(e) => setReceiverEmail(e.target.value)}
-                className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/20 text-white placeholder-white/50 focus:outline-none focus:border-neon-green/50 backdrop-blur-sm transition-all duration-300 font-light"
-                placeholder="recipient@email.com"
-                required
-              />
-            </div>
-
-            <div>
               <label className="block text-sm text-white/70 mb-2">Amount (₹)</label>
               <input
                 type="number"
@@ -151,11 +137,10 @@ const TransferPage = () => {
                 required
               />
             </div>
-
             <button
               type="submit"
               disabled={loading}
-              className="w-full px-6 py-3 rounded-full bg-gradient-to-r from-fintech-green to-electric-blue text-black font-medium hover:shadow-lg hover:shadow-fintech-green/25 transition-all duration-300 flex items-center justify-center gap-2"
+              className="w-full px-6 py-3 rounded-full bg-gradient-to-r from-neon-green to-sky-blue text-black font-medium hover:shadow-lg hover:shadow-neon-green/25 transition-all duration-300 flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>
@@ -165,7 +150,7 @@ const TransferPage = () => {
               ) : (
                 <>
                   <Hand className="w-5 h-5" />
-                  Send Money
+                  Receive
                 </>
               )}
             </button>
@@ -187,10 +172,10 @@ const TransferPage = () => {
 
           <div className="mt-6 text-center">
             <button
-              onClick={() => navigate('/history')}
+              onClick={() => navigate('/user-dashboard')}
               className="text-white/60 hover:text-white transition-colors text-sm"
             >
-              View Transaction History
+              Back to Dashboard
             </button>
           </div>
         </motion.div>
@@ -199,4 +184,4 @@ const TransferPage = () => {
   );
 };
 
-export default TransferPage; 
+export default ReceivePage; 
