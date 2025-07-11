@@ -1,5 +1,4 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
 import { Loader2, AlertCircle } from 'lucide-react';
 // @ts-ignore
 import { Camera } from '@mediapipe/camera_utils';
@@ -33,6 +32,7 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel }) => {
   const cameraRef = useRef<any>(null);
   const handsRef = useRef<any>(null);
   const [cameraReady, setCameraReady] = useState(false);
+  const [currentStream, setCurrentStream] = useState<MediaStream | null>(null);
 
   // Utility functions (copied from HandScanRegister)
   function normalizeLandmarks(landmarks: any[]) {
@@ -126,46 +126,71 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel }) => {
     }
   }
 
-  // MediaPipe hand scan logic
+  // Camera setup (robust, simple, no camera selection)
   useEffect(() => {
-    let hands: any;
-    let camera: any;
     let isMounted = true;
+    let cameraInstance: any = null;
+    let handsInstance: any = null;
     setLoading(true);
     setError('');
     setProgress(0);
     steadyStartRef.current = null;
     handInBoxRef.current = false;
-    import('@mediapipe/hands').then(({ Hands }) => {
-      if (!isMounted) return;
-      hands = new Hands({
-        locateFile: (file: string) =>
-          `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
-      });
-      hands.setOptions({
-        maxNumHands: 1,
-        modelComplexity: 1,
-        minDetectionConfidence: 0.7,
-        minTrackingConfidence: 0.7
-      });
-      hands.onResults(onResults);
-      handsRef.current = hands;
-      if (videoRef.current) {
-        camera = new Camera(videoRef.current, {
-          onFrame: async () => {
-            await hands.send({ image: videoRef.current });
-          },
-          width: VIDEO_WIDTH,
-          height: VIDEO_HEIGHT
+    async function setupPalmScan() {
+      try {
+        // 1. Load MediaPipe Hands
+        const handsMod = await import('@mediapipe/hands');
+        const Hands = handsMod.Hands;
+        // 2. Load Camera
+        // @ts-ignore
+        const CameraClass = Camera;
+        // 3. Get camera
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { width: VIDEO_WIDTH, height: VIDEO_HEIGHT }, audio: false });
+        setCurrentStream(stream);
+        setCameraReady(true);
+        setError('');
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+        // 4. Setup MediaPipe Hands
+        handsInstance = new Hands({
+          locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
         });
-        cameraRef.current = camera;
-        camera.start().then(() => setCameraReady(true)).catch(() => setError('Camera error'));
+        handsInstance.setOptions({
+          maxNumHands: 1,
+          modelComplexity: 1,
+          minDetectionConfidence: 0.7,
+          minTrackingConfidence: 0.7
+        });
+        handsInstance.onResults(onResults);
+        handsRef.current = handsInstance;
+        // 5. Start Camera
+        if (videoRef.current && CameraClass) {
+          cameraInstance = new CameraClass(videoRef.current, {
+            onFrame: async () => {
+              if (handsInstance && videoRef.current) {
+                await handsInstance.send({ image: videoRef.current });
+              }
+            },
+            width: VIDEO_WIDTH,
+            height: VIDEO_HEIGHT
+          });
+          cameraInstance.start();
+          cameraRef.current = cameraInstance;
+        }
+        setLoading(false);
+      } catch (e: any) {
+        setError('Could not access camera: ' + (e.message || e));
+        setCameraReady(false);
+        setLoading(false);
       }
-    });
+    }
+    setupPalmScan();
     return () => {
       isMounted = false;
-      if (cameraRef.current) cameraRef.current.stop();
-      if (handsRef.current) handsRef.current.close();
+      if (cameraInstance) cameraInstance.stop();
+      if (handsInstance) handsInstance.close();
+      if (currentStream) currentStream.getTracks().forEach(track => track.stop());
     };
     // eslint-disable-next-line
   }, []);
@@ -206,15 +231,30 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel }) => {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center">
+    <div className="flex flex-col items-center justify-center w-full max-w-2xl mx-auto">
       <div className="mb-4 text-center">
         <h2 className="text-xl font-light text-white mb-2">Hand Scan</h2>
         <p className="text-white/70">Place your palm in the box and hold steady</p>
       </div>
-      <div className="relative">
-        <video ref={videoRef} width={VIDEO_WIDTH} height={VIDEO_HEIGHT} className="rounded-xl bg-black" style={{ display: cameraReady ? 'block' : 'none' }} />
-        <canvas ref={canvasRef} width={VIDEO_WIDTH} height={VIDEO_HEIGHT} className="absolute top-0 left-0 pointer-events-none rounded-xl" />
-        {!cameraReady && (
+      <div className="relative w-full flex flex-col items-center justify-center bg-black rounded-2xl shadow-lg overflow-hidden mb-4" style={{ aspectRatio: '3/2', maxWidth: 640 }}>
+        <video
+          ref={videoRef}
+          className="absolute top-0 left-0 w-full h-full object-cover rounded-2xl"
+          style={{ aspectRatio: '3/2', maxWidth: '100%' }}
+          width={VIDEO_WIDTH}
+          height={VIDEO_HEIGHT}
+          autoPlay
+          playsInline
+          muted
+        />
+        <canvas
+          ref={canvasRef}
+          className="absolute top-0 left-0 w-full h-full pointer-events-none"
+          style={{ aspectRatio: '3/2', maxWidth: '100%' }}
+          width={VIDEO_WIDTH}
+          height={VIDEO_HEIGHT}
+        />
+        {(!cameraReady || loading) && (
           <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-80 rounded-xl">
             <Loader2 className="w-8 h-8 text-white animate-spin" />
           </div>
