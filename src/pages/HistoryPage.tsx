@@ -34,9 +34,7 @@ const HistoryPage = () => {
         return;
       }
 
-      const response = await api.get('/api/transactions/history', {
-        params: { userId: user.id }
-      });
+      const response = await api.get(`/api/transaction/history?userId=${user.id}`);
       setTransactions(response.data.transactions || []);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to load transaction history');

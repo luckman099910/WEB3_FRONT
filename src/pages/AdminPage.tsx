@@ -258,7 +258,7 @@ const AdminPage = () => {
                   <select
                     value={sendValueUser}
                     onChange={(e) => setSendValueUser(e.target.value)}
-                    className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/20 text-white focus:outline-none text-lg"
+                    className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/20 text-white focus:outline-none text-lg" style={{backgroundColor: "#29303c"}}
                     required
                   >
                     <option value="">-- Select a user --</option>

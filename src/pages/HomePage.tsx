@@ -164,7 +164,6 @@ const HomePage = () => {
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </button>
               </div>
-              {/* Palm Register Modal */}
             </motion.div>
           </div>
         </div>
