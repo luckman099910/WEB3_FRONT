@@ -97,7 +97,7 @@ const HomePage = () => {
   return (
     <div className="bg-tech-blue pt-20">
       {/* Hero Section */}
-      <section className="relative overflow-hidden py-8">
+      <section className="relative overflow-hidden py-8" style={{paddingTop:"5rem"}}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <motion.div
@@ -462,45 +462,6 @@ const HomePage = () => {
               </div>
             </motion.div>
           </div>
-        </div>
-      </section>
-
-      {/* Join the Movement Section */}
-      <section className="py-8 bg-black/20">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="p-8 rounded-3xl bg-gradient-to-br from-neon-green/10 to-sky-blue/10 border border-neon-green/20 glass-effect"
-          >
-            <h2 className="text-3xl md:text-4xl font-light text-white mb-4">
-              Join the Movement
-            </h2>
-            <p className="text-xl text-white/70 font-light mb-8">
-              Join thousands of early adopters and be first to experience palm-based payments.
-            </p>
-            <div className="space-y-4 max-w-md mx-auto">
-              <input
-                type="text"
-                placeholder="Name"
-                className="w-full px-4 py-3 rounded-full glass-effect text-white placeholder-white/50 focus:outline-none focus:border-neon-green/50 font-light"
-              />
-              <input
-                type="email"
-                placeholder="Email/Phone"
-                className="w-full px-4 py-3 rounded-full glass-effect text-white placeholder-white/50 focus:outline-none focus:border-neon-green/50 font-light"
-              />
-              <select className="w-full px-4 py-3 rounded-full glass-effect text-white focus:outline-none focus:border-neon-green/50 font-light">
-                <option value="">Are you a User or Merchant?</option>
-                <option value="user">User</option>
-                <option value="merchant">Merchant</option>
-              </select>
-              <button className="w-full px-6 py-3 rounded-full bg-gradient-to-r from-neon-green to-sky-blue text-tech-blue font-normal hover:neon-glow transition-all duration-300 animate-glow">
-                Join Early Access
-              </button>
-            </div>
-          </motion.div>
         </div>
       </section>
 

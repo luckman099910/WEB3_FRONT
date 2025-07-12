@@ -76,7 +76,7 @@ const ReceivePage = () => {
   if (showHandScan) {
     return (
       <Layout>
-        <div className="flex justify-center items-center min-h-[70vh]">
+        <div className="flex justify-center items-center min-h-[70vh]" style={{height:"100vh"}}>
           <div className="w-full max-w-md">
             <div className="mb-6 text-center">
               <button
@@ -98,7 +98,7 @@ const ReceivePage = () => {
 
   return (
     <Layout>
-      <div className="flex justify-center items-center min-h-[70vh]">
+      <div className="flex justify-center items-center min-h-[70vh]" style={{height:"100vh"}}>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

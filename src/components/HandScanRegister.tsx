@@ -50,6 +50,11 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
   const steadyStartRef = useRef<number | null>(null);
   const handInBoxRef = useRef(false);
 
+  // Add at the top, after other hooks
+  const animationRef = useRef<number | null>(null);
+  const [borderAnimPos, setBorderAnimPos] = useState(0);
+  const [borderAnimDir, setBorderAnimDir] = useState(1); // 1 = down, -1 = up
+
   // Normalize landmarks for stable hash (exact copy from HTML)
   function normalizeLandmarks(landmarks: any[]) {
     const base = landmarks[0]; // wrist
@@ -102,38 +107,67 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
     };
   }
 
-  // Draw guide box and hand skeleton (adapted from HTML)
-  function drawOverlay(landmarks: any, handInBox: boolean, progress: number) {
+  // Replace drawOverlay with animated border logic
+  function drawOverlay(landmarks: any, handInBox: boolean, progress: number, animPos?: number) {
     if (!canvasRef.current) return;
     const ctx = canvasRef.current.getContext('2d');
     if (!ctx) return;
-
     ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-    
-    // Draw guide box (fully closed, thin border)
-    ctx.save();
-    let boxColor = '#ff4d4d';
-    if (handInBox && progress < 1) boxColor = '#00CFFF'; // blue while timing
-    if (handInBox && progress >= 1) boxColor = '#00FFB2'; // green when ready
-    ctx.strokeStyle = boxColor;
-    ctx.lineWidth = 2; // thin border
-    ctx.setLineDash([]); // solid line
-    ctx.strokeRect(GUIDE_BOX.x, GUIDE_BOX.y, GUIDE_BOX.w, GUIDE_BOX.h);
-    ctx.restore();
-    
-    // Draw hand skeleton
+
+    // Draw animated border if scanning
+    if (handInBox && progress < 1 && typeof animPos === 'number') {
+      // Draw static border
+      ctx.save();
+      ctx.strokeStyle = '#00CFFF';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([]);
+      ctx.strokeRect(GUIDE_BOX.x, GUIDE_BOX.y, GUIDE_BOX.w, GUIDE_BOX.h);
+      ctx.restore();
+      // Draw animated blue line moving up/down
+      ctx.save();
+      ctx.strokeStyle = '#00CFFF';
+      ctx.lineWidth = 4;
+      // Animate on left and right borders
+      const y = GUIDE_BOX.y + animPos;
+      ctx.beginPath();
+      ctx.moveTo(GUIDE_BOX.x, y);
+      ctx.lineTo(GUIDE_BOX.x, y + 40);
+      ctx.moveTo(GUIDE_BOX.x + GUIDE_BOX.w, y);
+      ctx.lineTo(GUIDE_BOX.x + GUIDE_BOX.w, y + 40);
+      ctx.stroke();
+      // Animate on top and bottom borders
+      const x = GUIDE_BOX.x + animPos;
+      ctx.beginPath();
+      ctx.moveTo(x, GUIDE_BOX.y);
+      ctx.lineTo(x + 40, GUIDE_BOX.y);
+      ctx.moveTo(x, GUIDE_BOX.y + GUIDE_BOX.h);
+      ctx.lineTo(x + 40, GUIDE_BOX.y + GUIDE_BOX.h);
+      ctx.stroke();
+      ctx.restore();
+    } else {
+      // Default border logic
+      ctx.save();
+      let boxColor = '#ff4d4d';
+      if (handInBox && progress < 1) boxColor = '#00CFFF';
+      if (handInBox && progress >= 1) boxColor = '#00FFB2';
+      ctx.strokeStyle = boxColor;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([]);
+      ctx.strokeRect(GUIDE_BOX.x, GUIDE_BOX.y, GUIDE_BOX.w, GUIDE_BOX.h);
+      ctx.restore();
+    }
+    // Draw hand skeleton (unchanged)
     if (landmarks) {
-      // Draw lines
       const connections = [
-        [0,1],[1,2],[2,3],[3,4],      // Thumb
-        [0,5],[5,6],[6,7],[7,8],      // Index
-        [5,9],[9,10],[10,11],[11,12], // Middle
-        [9,13],[13,14],[14,15],[15,16], // Ring
-        [13,17],[17,18],[18,19],[19,20], // Pinky
-        [0,17] // Palm base
+        [0,1],[1,2],[2,3],[3,4],
+        [0,5],[5,6],[6,7],[7,8],
+        [5,9],[9,10],[10,11],[11,12],
+        [9,13],[13,14],[14,15],[15,16],
+        [13,17],[17,18],[18,19],[19,20],
+        [0,17]
       ];
       ctx.save();
-      ctx.strokeStyle = '#00CFFF'; // electric-blue
+      ctx.strokeStyle = '#00CFFF';
       ctx.lineWidth = 2.5;
       ctx.setLineDash([]);
       for (const [a, b] of connections) {
@@ -145,10 +179,8 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
         ctx.stroke();
       }
       ctx.restore();
-      
-      // Draw points
       ctx.save();
-      ctx.fillStyle = '#00FFB2'; // fintech-green
+      ctx.fillStyle = '#00FFB2';
       for (const p of landmarks) {
         const pt = toCanvas(p);
         ctx.beginPath();
@@ -195,7 +227,7 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
     }
     
     // Draw overlay with latest computed values
-    drawOverlay(results.multiHandLandmarks?.[0], inBox, newProgress);
+    drawOverlay(results.multiHandLandmarks?.[0], inBox, newProgress, borderAnimPos);
   }
 
   // Camera setup (adapted from HTML)
@@ -439,7 +471,7 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
           setProgress(0);
         }
         // Draw overlay with latest computed values
-        drawOverlay(results.multiHandLandmarks?.[0], inBox, newProgress);
+        drawOverlay(results.multiHandLandmarks?.[0], inBox, newProgress, borderAnimPos);
       });
       handsRef.current = handsInstance;
       // 6. Start MediaPipe Camera
@@ -476,6 +508,36 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
       setProgress(newProgress);
     }
   }, [handInBox, steadyStart]);
+
+  // Animation loop for border effect
+  useEffect(() => {
+    if (handInBox && progress < 1) {
+      let lastTime = performance.now();
+      const animate = (now: number) => {
+        const dt = now - lastTime;
+        lastTime = now;
+        setBorderAnimPos(pos => {
+          let next = pos + borderAnimDir * (dt * 0.2); // speed
+          const max = GUIDE_BOX.h - 40;
+          if (next > max) {
+            setBorderAnimDir(-1);
+            next = max;
+          } else if (next < 0) {
+            setBorderAnimDir(1);
+            next = 0;
+          }
+          return next;
+        });
+        animationRef.current = requestAnimationFrame(animate);
+      };
+      animationRef.current = requestAnimationFrame(animate);
+      return () => {
+        if (animationRef.current) cancelAnimationFrame(animationRef.current);
+      };
+    } else {
+      setBorderAnimPos(0);
+    }
+  }, [handInBox, progress]);
 
   return (
     <div className="bg-deep-navy text-text-primary h-[calc(100vh-5rem)] flex items-center justify-center">

@@ -118,7 +118,7 @@ const DemoPage = () => {
     <div className="bg-tech-blue">
       {/* Hero Section */}
       <section className="relative overflow-hidden py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -141,7 +141,7 @@ const DemoPage = () => {
       </section>
 
       {/* Interactive Demo */}
-      <section className="py-20">
+      <section>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Demo Controls */}
           <motion.div

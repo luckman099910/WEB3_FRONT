@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { api, safeJsonParse } from '../api/palmPayApi';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
 
 const UserDashboard = () => {
   const [activeTab, setActiveTab] = useState('wallet');
@@ -31,6 +32,10 @@ const UserDashboard = () => {
   const [userData, setUserData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [notificationsActive, setNotificationsActive] = useState(() => {
+    // Persist notification state in localStorage
+    return localStorage.getItem('notificationsActive') === 'true';
+  });
 
   // Mock user ID for demo - in real app this would come from auth
   const userId = 'demo-user-id';
@@ -53,6 +58,15 @@ const UserDashboard = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleToggleNotifications = () => {
+    setNotificationsActive((prev) => {
+      const next = !prev;
+      localStorage.setItem('notificationsActive', next ? 'true' : 'false');
+      toast(next ? 'Notifications activated!' : 'Notifications deactivated!');
+      return next;
+    });
   };
 
 
@@ -167,12 +181,6 @@ const UserDashboard = () => {
                         )}
                       </button>
                     </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="p-4 rounded-full bg-gradient-to-br from-fintech-green to-electric-blue mb-2 animate-pulse-glow">
-                      <Wallet className="w-8 h-8 text-black" />
-                    </div>
-                    <p className="text-sm text-fintech-green font-ultralight">+12.5% this month</p>
                   </div>
                 </div>
                 
@@ -436,8 +444,13 @@ const UserDashboard = () => {
               </p>
             </div>
             <div className="flex items-center space-x-4">
-              <button className="p-3 rounded-2xl bg-white/10 hover:bg-white/20 transition-all duration-300">
-                <Bell className="w-6 h-6 text-white" />
+              {/* Notification Bell */}
+              <button
+                className={`p-3 rounded-2xl transition-all duration-300 ${notificationsActive ? 'bg-gradient-to-r from-fintech-green to-electric-blue text-black shadow-lg shadow-fintech-green/30 animate-glow' : 'bg-white/10 hover:bg-white/20 text-white'}`}
+                onClick={handleToggleNotifications}
+                title={notificationsActive ? 'Notifications are ON' : 'Notifications are OFF'}
+              >
+                <Bell className="w-6 h-6" />
               </button>
               <button className="p-3 rounded-2xl bg-white/10 hover:bg-white/20 transition-all duration-300">
                 <Settings className="w-6 h-6 text-white" />

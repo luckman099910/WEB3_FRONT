@@ -34,6 +34,9 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel }) => {
   const handsRef = useRef<any>(null);
   const [cameraReady, setCameraReady] = useState(false);
   const [currentStream, setCurrentStream] = useState<MediaStream | null>(null);
+  const animationRef = useRef<number | null>(null);
+  const [borderAnimPos, setBorderAnimPos] = useState(0);
+  const [borderAnimDir, setBorderAnimDir] = useState(1); // 1 = down, -1 = up
 
   // Utility functions (copied from HandScanRegister)
   function normalizeLandmarks(landmarks: any[]) {
@@ -79,20 +82,55 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel }) => {
       y: p.y * canvasRef.current.height
     };
   }
-  function drawOverlay(landmarks: any, handInBox: boolean, progress: number) {
+  function drawOverlay(landmarks: any, handInBox: boolean, progress: number, animPos?: number) {
     if (!canvasRef.current) return;
     const ctx = canvasRef.current.getContext('2d');
     if (!ctx) return;
     ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-    ctx.save();
-    let boxColor = '#ff4d4d';
-    if (handInBox && progress < 1) boxColor = '#00CFFF';
-    if (handInBox && progress >= 1) boxColor = '#00FFB2';
-    ctx.strokeStyle = boxColor;
-    ctx.lineWidth = 2;
-    ctx.setLineDash([]);
-    ctx.strokeRect(GUIDE_BOX.x, GUIDE_BOX.y, GUIDE_BOX.w, GUIDE_BOX.h);
-    ctx.restore();
+
+    // Draw animated border if scanning
+    if (handInBox && progress < 1 && typeof animPos === 'number') {
+      // Draw static border
+      ctx.save();
+      ctx.strokeStyle = '#00CFFF';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([]);
+      ctx.strokeRect(GUIDE_BOX.x, GUIDE_BOX.y, GUIDE_BOX.w, GUIDE_BOX.h);
+      ctx.restore();
+      // Draw animated blue line moving up/down
+      ctx.save();
+      ctx.strokeStyle = '#00CFFF';
+      ctx.lineWidth = 4;
+      // Animate on left and right borders
+      const y = GUIDE_BOX.y + animPos;
+      ctx.beginPath();
+      ctx.moveTo(GUIDE_BOX.x, y);
+      ctx.lineTo(GUIDE_BOX.x, y + 40);
+      ctx.moveTo(GUIDE_BOX.x + GUIDE_BOX.w, y);
+      ctx.lineTo(GUIDE_BOX.x + GUIDE_BOX.w, y + 40);
+      ctx.stroke();
+      // Animate on top and bottom borders
+      const x = GUIDE_BOX.x + animPos;
+      ctx.beginPath();
+      ctx.moveTo(x, GUIDE_BOX.y);
+      ctx.lineTo(x + 40, GUIDE_BOX.y);
+      ctx.moveTo(x, GUIDE_BOX.y + GUIDE_BOX.h);
+      ctx.lineTo(x + 40, GUIDE_BOX.y + GUIDE_BOX.h);
+      ctx.stroke();
+      ctx.restore();
+    } else {
+      // Default border logic
+      ctx.save();
+      let boxColor = '#ff4d4d';
+      if (handInBox && progress < 1) boxColor = '#00CFFF';
+      if (handInBox && progress >= 1) boxColor = '#00FFB2';
+      ctx.strokeStyle = boxColor;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([]);
+      ctx.strokeRect(GUIDE_BOX.x, GUIDE_BOX.y, GUIDE_BOX.w, GUIDE_BOX.h);
+      ctx.restore();
+    }
+    // Draw hand skeleton (unchanged)
     if (landmarks) {
       const connections = [
         [0,1],[1,2],[2,3],[3,4],
@@ -214,6 +252,36 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel }) => {
     // eslint-disable-next-line
   }, []);
 
+  // Animation loop for border effect
+  useEffect(() => {
+    if (handInBox && progress < 1) {
+      let lastTime = performance.now();
+      const animate = (now: number) => {
+        const dt = now - lastTime;
+        lastTime = now;
+        setBorderAnimPos(pos => {
+          let next = pos + borderAnimDir * (dt * 0.2); // speed
+          const max = GUIDE_BOX.h - 40;
+          if (next > max) {
+            setBorderAnimDir(-1);
+            next = max;
+          } else if (next < 0) {
+            setBorderAnimDir(1);
+            next = 0;
+          }
+          return next;
+        });
+        animationRef.current = requestAnimationFrame(animate);
+      };
+      animationRef.current = requestAnimationFrame(animate);
+      return () => {
+        if (animationRef.current) cancelAnimationFrame(animationRef.current);
+      };
+    } else {
+      setBorderAnimPos(0);
+    }
+  }, [handInBox, progress]);
+
   function onResults(results: any) {
     let handJustEntered = false;
     let inBox = false;
@@ -246,7 +314,8 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel }) => {
       steadyStartRef.current = null;
       setProgress(0);
     }
-    drawOverlay(results.multiHandLandmarks?.[0], inBox, newProgress);
+    // Draw overlay with latest computed values
+    drawOverlay(results.multiHandLandmarks?.[0], inBox, newProgress, borderAnimPos);
   }
 
   return (

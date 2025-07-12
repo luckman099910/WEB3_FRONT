@@ -63,11 +63,11 @@ const TransferPage = () => {
         setError('Please login to continue.');
         setShowHandScan(false);
         return;
-      }
+        }
 
       const transferData = {
         amount: parseFloat(amount),
-        handData,
+          handData,
         ...(transferMethod === 'email' 
           ? { receiverEmail } 
           : { receiverPhone }
@@ -113,7 +113,7 @@ const TransferPage = () => {
   if (showHandScan) {
     return (
       <Layout>
-        <div className="flex justify-center items-center min-h-[70vh]">
+        <div className="flex justify-center items-center min-h-[70vh]" style={{height:"100vh"}}>
           <div className="w-full max-w-md">
             <div className="mb-6 text-center">
               <button
@@ -136,7 +136,7 @@ const TransferPage = () => {
 
   return (
     <Layout>
-      <div className="flex justify-center items-center min-h-[70vh]">
+      <div className="flex justify-center items-center min-h-[70vh]" style={{height:"100vh"}}>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -185,13 +185,13 @@ const TransferPage = () => {
             </div>
 
             {transferMethod === 'email' ? (
-              <div>
-                <label className="block text-sm text-white/70 mb-2">Receiver Email</label>
-                <input
-                  type="email"
-                  value={receiverEmail}
-                  onChange={(e) => setReceiverEmail(e.target.value)}
-                  className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/20 text-white placeholder-white/50 focus:outline-none focus:border-neon-green/50 backdrop-blur-sm transition-all duration-300 font-light"
+            <div>
+              <label className="block text-sm text-white/70 mb-2">Receiver Email</label>
+              <input
+                type="email"
+                value={receiverEmail}
+                onChange={(e) => setReceiverEmail(e.target.value)}
+                className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/20 text-white placeholder-white/50 focus:outline-none focus:border-neon-green/50 backdrop-blur-sm transition-all duration-300 font-light"
                   placeholder="receiver@email.com"
                   required
                 />
@@ -205,9 +205,9 @@ const TransferPage = () => {
                   onChange={(e) => setReceiverPhone(e.target.value)}
                   className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/20 text-white placeholder-white/50 focus:outline-none focus:border-neon-green/50 backdrop-blur-sm transition-all duration-300 font-light"
                   placeholder="+1234567890"
-                  required
-                />
-              </div>
+                required
+              />
+            </div>
             )}
 
             <div>
