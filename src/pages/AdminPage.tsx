@@ -179,7 +179,7 @@ const AdminPage = () => {
   return (
     <div className="min-h-screen flex flex-col items-center pt-20">
       {/* Header */}
-      <section className="mb-4 w-full flex flex-col items-center">
+      <section className="mb-4 w-full flex flex-col items-center pt-20">
         <h1 className="text-3xl font-bold text-white">Admin Dashboard</h1>
       </section>
       {/* Tabs */}

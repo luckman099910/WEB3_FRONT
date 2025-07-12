@@ -9,7 +9,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
     <div className="min-h-screen">
       <Navbar />
-      <main className="pt-20">
+      <main>
         {children}
       </main>
     </div>

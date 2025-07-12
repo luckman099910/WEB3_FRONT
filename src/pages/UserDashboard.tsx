@@ -417,7 +417,7 @@ const UserDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen py-20">
+    <div className="min-h-screen py-20" style={{paddingTop:"7rem"}}>
       {/* Header */}
       <section className="mb-8">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">

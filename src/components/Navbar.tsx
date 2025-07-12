@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, X, Hand, Rocket } from 'lucide-react';
 import { motion } from 'framer-motion';
 import logo from '../assets/palmpay-logo.png';
+import { clearOtpCooldown } from '../pages/LoginPage';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -12,6 +13,9 @@ const Navbar = () => {
   const user = isLoggedIn ? JSON.parse(localStorage.getItem('user') || 'null') : null;
 
   const handleLogout = () => {
+    if (user && user.email) {
+      clearOtpCooldown(user.email);
+    }
     localStorage.removeItem('user');
     localStorage.removeItem('session');
     navigate('/login');

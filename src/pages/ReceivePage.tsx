@@ -3,8 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import HandScan from '../components/HandScan';
 import { motion } from 'framer-motion';
-import { Hand, Download } from 'lucide-react';
+import { Hand, Download, Mail, Phone } from 'lucide-react';
 import axios from 'axios';
+// @ts-ignore
+import config from '../config';
 
 const ReceivePage = () => {
   const [amount, setAmount] = useState('');
@@ -16,9 +18,10 @@ const ReceivePage = () => {
   const [showRegisterPrompt, setShowRegisterPrompt] = useState(false);
   const navigate = useNavigate();
 
-  // Get current user's email from localStorage
+  // Get current user's information from localStorage
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const receiverEmail = user?.email || '';
+  const receiverPhone = user?.phone || '';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,45 +36,33 @@ const ReceivePage = () => {
   };
 
   const handleHandScanSuccess = async (handData: string) => {
-    setShowHandScan(false);
     setLoading(true);
     setError('');
     setSuccess('');
-    setStatusMsg('');
+    setStatusMsg('Processing receive request...');
+
     try {
-      const session = localStorage.getItem('session');
-      let token = '';
-      if (session) {
-        if (session.startsWith('eyJ')) {
-          token = session.replace(/['"]+/g, '');
-        } else {
-          const parsed = JSON.parse(session);
-          token = parsed.token || '';
-        }
+      const token = localStorage.getItem('session');
+
+      if (!user.id || !token) {
+        setError('Please login to continue.');
+        setShowHandScan(false);
+        return;
       }
-      const res = await axios.post(
-        '/api/transfer',
-        {
-          receiverEmail,
-          amount,
-          handData,
-        },
-        {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        }
-      );
-      const tx = res.data?.transaction;
-      setSuccess('Remittance successful!');
-      setStatusMsg(`${tx?.amount} INR was successfully transmitted from ${tx?.from_user_email} to ${tx?.to_user_email}.`);
-      setAmount('');
+
+      // For receive, we'll create a demo transaction showing the user's receive info
+      setSuccess('Receive request processed!');
+      setStatusMsg(`Your receive details: Email: ${receiverEmail}${receiverPhone ? `, Phone: ${receiverPhone}` : ''}`);
+      
+      setTimeout(() => {
+        navigate('/user-dashboard');
+      }, 3000);
     } catch (err: any) {
-      if (err.response?.data?.error?.includes('Sender not found')) {
-        setShowRegisterPrompt(true);
-      } else {
-        setError(err.response?.data?.error || 'Remittance failed. Please try again later.');
-      }
+      console.error('Receive error:', err);
+      setError(err.response?.data?.error || 'Receive request failed. Please try again.');
     } finally {
       setLoading(false);
+      setShowHandScan(false);
     }
   };
 
@@ -80,8 +71,30 @@ const ReceivePage = () => {
     setError('');
     setSuccess('');
     setStatusMsg('');
-    setShowRegisterPrompt(false);
   };
+
+  if (showHandScan) {
+    return (
+      <Layout>
+        <div className="flex justify-center items-center min-h-[70vh]">
+          <div className="w-full max-w-md">
+            <div className="mb-6 text-center">
+              <button
+                onClick={handleCancel}
+                className="flex items-center space-x-2 text-white/70 hover:text-white transition-colors"
+              >
+                <span>Back to Receive</span>
+              </button>
+            </div>
+            <HandScan
+              onSuccess={handleHandScanSuccess}
+              onCancel={handleCancel}
+            />
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
@@ -89,94 +102,69 @@ const ReceivePage = () => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
           className="w-full max-w-md p-8 rounded-3xl glass-effect border border-white/20 shadow-xl"
         >
-          <div className="text-center mb-6">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-neon-green to-sky-blue mb-4">
-              <Download className="w-8 h-8 text-black" />
-            </div>
-            <h2 className="text-2xl font-light text-white mb-2">Receive Money</h2>
-            <p className="text-white/70">Request a remittance to your wallet. Sender will be authenticated by palm scan.</p>
+          <div className="flex items-center space-x-2 mb-6">
+            <Download className="w-6 h-6 text-neon-green" />
+            <h2 className="text-2xl font-light text-white">Receive Money</h2>
           </div>
 
-          {error && (
-            <div className="mb-4 p-4 rounded-2xl bg-red-500/20 border border-red-500/30 text-red-400 text-center">
-              {error}
-            </div>
-          )}
+          {error && <div className="mb-4 text-red-500 text-center">{error}</div>}
+          {success && <div className="mb-4 text-green-500 text-center">{success}</div>}
+          {statusMsg && <div className="mb-4 text-blue-500 text-center">{statusMsg}</div>}
 
-          {success && (
-            <div className="mb-4 p-4 rounded-2xl bg-green-500/20 border border-green-500/30 text-green-400 text-center">
-              {success}
+          {/* User's Receive Information */}
+          <div className="mb-6 p-4 rounded-2xl bg-white/5 border border-white/10">
+            <h3 className="text-lg font-light text-white mb-3">Your Receive Details</h3>
+            <div className="space-y-2">
+              {receiverEmail && (
+                <div className="flex items-center space-x-2">
+                  <Mail className="w-4 h-4 text-neon-green" />
+                  <span className="text-white/80 font-light">{receiverEmail}</span>
+                </div>
+              )}
+              {receiverPhone && (
+                <div className="flex items-center space-x-2">
+                  <Phone className="w-4 h-4 text-neon-green" />
+                  <span className="text-white/80 font-light">{receiverPhone}</span>
+                </div>
+              )}
+              {!receiverEmail && !receiverPhone && (
+                <p className="text-white/60 text-sm">No contact information available</p>
+              )}
             </div>
-          )}
-
-          {statusMsg && (
-            <div className="mb-4 p-4 rounded-2xl bg-blue-500/20 border border-blue-500/30 text-blue-400 text-center">
-              {statusMsg}
-            </div>
-          )}
-
-          {showRegisterPrompt && (
-            <div className="mb-4 p-4 rounded-2xl bg-yellow-500/20 border border-yellow-500/30 text-yellow-700 text-center">
-              Sender not found. Please re-register your palm.
-            </div>
-          )}
+          </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label className="block text-sm text-white/70 mb-2">Amount (₹)</label>
+              <label className="block text-sm text-white/70 mb-2">Expected Amount (INR)</label>
               <input
                 type="number"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/20 text-white placeholder-white/50 focus:outline-none focus:border-neon-green/50 backdrop-blur-sm transition-all duration-300 font-light"
                 placeholder="0.00"
+                min="0.01"
                 step="0.01"
-                min="0"
                 required
               />
             </div>
+
             <button
               type="submit"
+              className="w-full px-6 py-3 rounded-full btn-primary animate-glow font-medium flex items-center justify-center space-x-2"
               disabled={loading}
-              className="w-full px-6 py-3 rounded-full bg-gradient-to-r from-neon-green to-sky-blue text-black font-medium hover:shadow-lg hover:shadow-neon-green/25 transition-all duration-300 flex items-center justify-center gap-2"
             >
-              {loading ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
-                  Processing...
-                </>
-              ) : (
-                <>
-                  <Hand className="w-5 h-5" />
-                  Receive
-                </>
-              )}
+              <Download className="w-5 h-5" />
+              <span>{loading ? 'Processing...' : 'Confirm Receive'}</span>
             </button>
           </form>
 
-          {showHandScan && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70">
-              <div className="bg-[#10131c] rounded-2xl p-6 max-w-2xl w-full relative shadow-2xl">
-                <button
-                  onClick={handleCancel}
-                  className="absolute top-4 right-4 text-white hover:text-neon-green text-2xl font-bold"
-                >
-                  ×
-                </button>
-                <HandScan onCancel={handleCancel} onSuccess={handleHandScanSuccess} />
-              </div>
-            </div>
-          )}
-
           <div className="mt-6 text-center">
-            <button
-              onClick={() => navigate('/user-dashboard')}
-              className="text-white/60 hover:text-white transition-colors text-sm"
-            >
-              Back to Dashboard
-            </button>
+            <p className="text-white/60 text-sm">
+              Share your email or phone number with others to receive money
+            </p>
           </div>
         </motion.div>
       </div>

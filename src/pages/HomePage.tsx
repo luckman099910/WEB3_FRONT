@@ -95,7 +95,7 @@ const HomePage = () => {
   };
 
   return (
-    <div className="bg-tech-blue">
+    <div className="bg-tech-blue pt-20">
       {/* Hero Section */}
       <section className="relative overflow-hidden py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
