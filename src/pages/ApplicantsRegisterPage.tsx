@@ -46,7 +46,7 @@ const ApplicantsRegisterPage = () => {
 
   return (
     <Layout>
-      <div className="flex justify-center items-center min-h-[70vh]">
+      <div className="flex justify-center items-center min-h-[70vh]" style={{height:"100vh"}}>
         <form onSubmit={handleSubmit} className="w-full max-w-md p-8 rounded-3xl glass-effect border border-white/20 shadow-xl">
           <h2 className="text-2xl font-light text-primary mb-6 text-center">Join the PalmPay Waitlist</h2>
           {error && <div className="mb-4 text-red-500 text-center">{error}</div>}

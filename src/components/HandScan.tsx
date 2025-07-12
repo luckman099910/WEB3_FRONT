@@ -88,48 +88,58 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel }) => {
     if (!ctx) return;
     ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
 
-    // Draw animated border if scanning
+    // --- Four-corner border with glow ---
+    let glowColor = '#fff'; // idle
+    if (handInBox && progress < 1) glowColor = '#38bdf8'; // sky blue
+    if (handInBox && progress >= 1) glowColor = '#22c55e'; // green
+    ctx.save();
+    ctx.strokeStyle = glowColor;
+    ctx.shadowColor = glowColor;
+    ctx.shadowBlur = 16;
+    ctx.lineWidth = 5;
+    ctx.setLineDash([]);
+    const len = Math.max(20, Math.min(GUIDE_BOX.w, GUIDE_BOX.h) * 0.13);
+    // Top-left
+    ctx.beginPath();
+    ctx.moveTo(GUIDE_BOX.x, GUIDE_BOX.y + len);
+    ctx.lineTo(GUIDE_BOX.x, GUIDE_BOX.y);
+    ctx.lineTo(GUIDE_BOX.x + len, GUIDE_BOX.y);
+    ctx.stroke();
+    // Top-right
+    ctx.beginPath();
+    ctx.moveTo(GUIDE_BOX.x + GUIDE_BOX.w - len, GUIDE_BOX.y);
+    ctx.lineTo(GUIDE_BOX.x + GUIDE_BOX.w, GUIDE_BOX.y);
+    ctx.lineTo(GUIDE_BOX.x + GUIDE_BOX.w, GUIDE_BOX.y + len);
+    ctx.stroke();
+    // Bottom-left
+    ctx.beginPath();
+    ctx.moveTo(GUIDE_BOX.x, GUIDE_BOX.y + GUIDE_BOX.h - len);
+    ctx.lineTo(GUIDE_BOX.x, GUIDE_BOX.y + GUIDE_BOX.h);
+    ctx.lineTo(GUIDE_BOX.x + len, GUIDE_BOX.y + GUIDE_BOX.h);
+    ctx.stroke();
+    // Bottom-right
+    ctx.beginPath();
+    ctx.moveTo(GUIDE_BOX.x + GUIDE_BOX.w - len, GUIDE_BOX.y + GUIDE_BOX.h);
+    ctx.lineTo(GUIDE_BOX.x + GUIDE_BOX.w, GUIDE_BOX.y + GUIDE_BOX.h);
+    ctx.lineTo(GUIDE_BOX.x + GUIDE_BOX.w, GUIDE_BOX.y + GUIDE_BOX.h - len);
+    ctx.stroke();
+    ctx.restore();
+
+    // --- Animated scan line (sky blue) ---
     if (handInBox && progress < 1 && typeof animPos === 'number') {
-      // Draw static border
       ctx.save();
-      ctx.strokeStyle = '#00CFFF';
-      ctx.lineWidth = 2;
-      ctx.setLineDash([]);
-      ctx.strokeRect(GUIDE_BOX.x, GUIDE_BOX.y, GUIDE_BOX.w, GUIDE_BOX.h);
-      ctx.restore();
-      // Draw animated blue line moving up/down
-      ctx.save();
-      ctx.strokeStyle = '#00CFFF';
+      ctx.strokeStyle = '#38bdf8';
+      ctx.shadowColor = '#38bdf8';
+      ctx.shadowBlur = 12;
       ctx.lineWidth = 4;
-      // Animate on left and right borders
       const y = GUIDE_BOX.y + animPos;
       ctx.beginPath();
-      ctx.moveTo(GUIDE_BOX.x, y);
-      ctx.lineTo(GUIDE_BOX.x, y + 40);
-      ctx.moveTo(GUIDE_BOX.x + GUIDE_BOX.w, y);
-      ctx.lineTo(GUIDE_BOX.x + GUIDE_BOX.w, y + 40);
+      ctx.moveTo(GUIDE_BOX.x + 8, y);
+      ctx.lineTo(GUIDE_BOX.x + GUIDE_BOX.w - 8, y);
       ctx.stroke();
-      // Animate on top and bottom borders
-      const x = GUIDE_BOX.x + animPos;
-      ctx.beginPath();
-      ctx.moveTo(x, GUIDE_BOX.y);
-      ctx.lineTo(x + 40, GUIDE_BOX.y);
-      ctx.moveTo(x, GUIDE_BOX.y + GUIDE_BOX.h);
-      ctx.lineTo(x + 40, GUIDE_BOX.y + GUIDE_BOX.h);
-      ctx.stroke();
-      ctx.restore();
-    } else {
-      // Default border logic
-      ctx.save();
-      let boxColor = '#ff4d4d';
-      if (handInBox && progress < 1) boxColor = '#00CFFF';
-      if (handInBox && progress >= 1) boxColor = '#00FFB2';
-      ctx.strokeStyle = boxColor;
-      ctx.lineWidth = 2;
-      ctx.setLineDash([]);
-      ctx.strokeRect(GUIDE_BOX.x, GUIDE_BOX.y, GUIDE_BOX.w, GUIDE_BOX.h);
       ctx.restore();
     }
+
     // Draw hand skeleton (unchanged)
     if (landmarks) {
       const connections = [
