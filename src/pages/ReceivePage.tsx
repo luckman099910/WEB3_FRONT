@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import HandScan from '../components/HandScan';
 import { motion } from 'framer-motion';
-import { Hand, Download, Mail, Phone } from 'lucide-react';
+import { Download, Mail, Phone } from 'lucide-react';
 import axios from 'axios';
 // @ts-ignore
 import config from '../config';
@@ -49,7 +49,7 @@ const ReceivePage = () => {
       }
       // Send receive request to backend using transaction endpoint
       const response = await axios.post(
-        '/api/transfer',
+        `${config.API_BASE_URL}/api/transfer`,
         {
           handData,
           receiverEmail: user.email, // Use user's own ID as merchant for receive
