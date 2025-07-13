@@ -37,6 +37,7 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel }) => {
   const animationRef = useRef<number | null>(null);
   const [borderAnimPos, setBorderAnimPos] = useState(0);
   const [borderAnimDir, setBorderAnimDir] = useState(1); // 1 = down, -1 = up
+  const scanCompletedRef = useRef(false);
 
   // Utility functions (copied from HandScanRegister)
   function normalizeLandmarks(landmarks: any[]) {
@@ -185,6 +186,7 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel }) => {
     setProgress(0);
     steadyStartRef.current = null;
     handInBoxRef.current = false;
+    scanCompletedRef.current = false; // Reset on component mount
     async function setupPalmScan() {
       try {
         // 1. Load MediaPipe Hands script if not present
@@ -315,20 +317,20 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel }) => {
       if (!steadyStartRef.current || handJustEntered) steadyStartRef.current = Date.now();
       newProgress = Math.min(1, (Date.now() - (steadyStartRef.current || Date.now())) / STEADY_TIME);
       setProgress(newProgress);
-      if (newProgress >= 1) {
-        // Auto-complete scan
+      if (newProgress >= 1 && !scanCompletedRef.current) {
+        scanCompletedRef.current = true;
         if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
           const scanValue = hashPalm(results.multiHandLandmarks[0]);
           setTimeout(() => {
             onSuccess(scanValue);
-          }, 300); // slight delay for UI
+          }, 300);
         }
       }
     } else {
       steadyStartRef.current = null;
       setProgress(0);
+      scanCompletedRef.current = false; // Reset when hand leaves box
     }
-    // Draw overlay with latest computed values
     drawOverlay(results.multiHandLandmarks?.[0], inBox, newProgress, borderAnimPos);
   }
 
