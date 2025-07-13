@@ -48,13 +48,13 @@ const ReceivePage = () => {
         setShowHandScan(false);
         return;
       }
-      // Send receive request to backend (simulate as a transfer to self)
+      // Send receive request to backend using transaction endpoint
       const response = await axios.post(
-        '/api/transfer',
+        '/api/transaction',
         {
-          receiverEmail,
-          amount: parseFloat(amount),
           handData,
+          merchantId: user.id, // Use user's own ID as merchant for receive
+          amount: parseFloat(amount),
         },
         {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -71,7 +71,7 @@ const ReceivePage = () => {
       }
     } catch (err: any) {
       console.error('Receive error:', err);
-      setError(err.response?.data?.error || 'Receive request failed. Please try again.');
+      setError(err.response?.data?.message || 'Receive request failed. Please try again.');
     } finally {
       setLoading(false);
       setShowHandScan(false);
