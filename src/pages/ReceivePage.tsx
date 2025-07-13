@@ -52,7 +52,7 @@ const ReceivePage = () => {
         '/api/transfer',
         {
           handData,
-          receiverEmail: user.id, // Use user's own ID as merchant for receive
+          receiverEmail: user.email, // Use user's own ID as merchant for receive
           amount: parseFloat(amount),
         },
         {
