@@ -265,24 +265,29 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel }) => {
   // Animation loop for border effect
   useEffect(() => {
     if (handInBox && progress < 1) {
-      let lastTime = performance.now();
-      const animate = (now: number) => {
-        const dt = now - lastTime;
-        lastTime = now;
-        setBorderAnimPos(pos => {
-          let next = pos + borderAnimDir * (dt * 0.2); // speed
-          const max = GUIDE_BOX.h - 40;
-          if (next > max) {
-            setBorderAnimDir(-1);
-            next = max;
-          } else if (next < 0) {
-            setBorderAnimDir(1);
-            next = 0;
-          }
-          return next;
-        });
+      let direction = borderAnimDir;
+      let startTime = performance.now();
+      let pos = borderAnimPos;
+      const max = GUIDE_BOX.h - 16; // 8px padding top/bottom
+      const min = 8;
+      const duration = 1000; // ms for full up/down
+      function animate(now: number) {
+        const elapsed = now - startTime;
+        let t = (elapsed % duration) / duration;
+        // t: 0 to 1 for down, 1 to 0 for up
+        if (Math.floor(elapsed / duration) % 2 === 0) {
+          // Down
+          pos = min + t * (max - min);
+          direction = 1;
+        } else {
+          // Up
+          pos = max - t * (max - min);
+          direction = -1;
+        }
+        setBorderAnimPos(pos);
+        setBorderAnimDir(direction);
         animationRef.current = requestAnimationFrame(animate);
-      };
+      }
       animationRef.current = requestAnimationFrame(animate);
       return () => {
         if (animationRef.current) cancelAnimationFrame(animationRef.current);
