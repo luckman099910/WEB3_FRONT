@@ -47,21 +47,21 @@ const ReceivePage = () => {
         setShowHandScan(false);
         return;
       }
-      // Send receive request to backend using transaction endpoint
+      // Send receive request to backend using transfer endpoint
       const response = await axios.post(
         `${config.API_BASE_URL}/api/transfer`,
         {
-          handData,
-          receiverEmail: user.email, // Use user's own ID as merchant for receive
+          receiverEmail: user.email,
           amount: parseFloat(amount),
+          handData,
         },
         {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         }
       );
-      if (response.data && response.data.txid) {
+      if (response.data && response.data.transaction) {
         setSuccess('Receive request processed!');
-        setStatusMsg(`Transaction ID: ${response.data.txid}`);
+        setStatusMsg(`Transaction ID: ${response.data.transaction.id}`);
         setTimeout(() => {
           navigate('/user-dashboard');
         }, 3000);
@@ -70,7 +70,7 @@ const ReceivePage = () => {
       }
     } catch (err: any) {
       console.error('Receive error:', err);
-      setError(err.response?.data?.console.error|| 'Receive request failed. Please try again.');
+      setError(err.response?.data?.error || 'Receive request failed. Please try again.');
     } finally {
       setLoading(false);
       setShowHandScan(false);
