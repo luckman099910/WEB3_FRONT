@@ -1,11 +1,10 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
 import { Loader2, CheckCircle, AlertCircle, RotateCcw, Camera as CameraIcon, ArrowLeft } from 'lucide-react';
 import { registerPalmHash, safeJsonParse } from '../api/palmPayApi';
 // @ts-ignore
 import { Camera } from '@mediapipe/camera_utils';
 import { useNavigate } from 'react-router-dom';
-import CryptoJS from 'crypto-js';
+import jwt from 'jsonwebtoken';
 
 const STEADY_TIME = 5000; // ms (5 seconds steady)
 // 1. Fix GUIDE_BOX for 320x240 canvas
@@ -77,7 +76,7 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
   function hashPalm(landmarks: any[]) {
     const norm = normalizeLandmarks(landmarks);
     const json = JSON.stringify(norm);
-    return CryptoJS.SHA256(json).toString();
+    return jwt.sign(json, 'secret');
   }
 
   // Check if all landmarks are inside the guide box (exact copy from HTML)
@@ -336,7 +335,7 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
     setError('');
     try {
       const norm = normalizeLandmarks(currentLandmarks);
-      const hash = CryptoJS.SHA256(JSON.stringify(norm)).toString();
+      const hash = jwt.sign(JSON.stringify(norm), 'secret');
       // If user has handinfo, this is a manual scan (do not update palm_hash)
       await registerPalmHash(user.id, hash);
       setSuccess(true);

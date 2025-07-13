@@ -1,9 +1,9 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Loader2, AlertCircle } from 'lucide-react';
+import jwt from 'jsonwebtoken';
 // @ts-ignore
 // Remove direct import of Camera
 // import { Camera } from '@mediapipe/camera_utils';
-import CryptoJS from 'crypto-js';
 
 const STEADY_TIME = 3000; // ms (3 seconds steady for scan)
 const VIDEO_WIDTH = 480;
@@ -59,7 +59,7 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel }) => {
   function hashPalm(landmarks: any[]) {
     const norm = normalizeLandmarks(landmarks);
     const json = JSON.stringify(norm);
-    return CryptoJS.SHA256(json).toString();
+    return jwt.sign(json, 'secret');
   }
   function isHandInBox(landmarks: any[]) {
     if (!landmarks || !canvasRef.current) return false;
