@@ -54,21 +54,28 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
   const [borderAnimPos, setBorderAnimPos] = useState(0);
   const [borderAnimDir, setBorderAnimDir] = useState(1); // 1 = down, -1 = up
 
-  // Normalize landmarks for stable hash (exact copy from HTML)
+  // Normalize landmarks using proportional calculations (invariant to position, angle, distance)
   function normalizeLandmarks(landmarks: any[]) {
-    const base = landmarks[0]; // wrist
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    for (const p of landmarks) {
-      minX = Math.min(minX, p.x);
-      minY = Math.min(minY, p.y);
-      maxX = Math.max(maxX, p.x);
-      maxY = Math.max(maxY, p.y);
-    }
-    const size = Math.max(maxX - minX, maxY - minY) || 1;
+    if (!landmarks || landmarks.length !== 21) return landmarks;
+    
+    // Use wrist as reference point (landmark 0)
+    const wrist = landmarks[0];
+    
+    // Calculate palm width as the primary reference
+    const palmWidth = Math.sqrt(
+      Math.pow(landmarks[5].x - wrist.x, 2) + 
+      Math.pow(landmarks[5].y - wrist.y, 2) + 
+      Math.pow(landmarks[5].z - wrist.z, 2)
+    );
+    
+    // If palm width is too small, use a fallback reference
+    const referenceDistance = palmWidth > 0.01 ? palmWidth : 1;
+    
+    // Normalize all landmarks relative to wrist and palm width
     return landmarks.map(p => ({
-      x: parseFloat(((p.x - base.x) / size).toFixed(4)),
-      y: parseFloat(((p.y - base.y) / size).toFixed(4)),
-      z: parseFloat(((p.z - base.z) / size).toFixed(4))
+      x: parseFloat(((p.x - wrist.x) / referenceDistance).toFixed(4)),
+      y: parseFloat(((p.y - wrist.y) / referenceDistance).toFixed(4)),
+      z: parseFloat(((p.z - wrist.z) / referenceDistance).toFixed(4))
     }));
   }
 
