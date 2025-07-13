@@ -50,10 +50,10 @@ const ReceivePage = () => {
       }
       // Send receive request to backend using transaction endpoint
       const response = await axios.post(
-        '/api/transaction',
+        '/api/transfer',
         {
           handData,
-          merchantId: user.id, // Use user's own ID as merchant for receive
+          receiverEmail: user.id, // Use user's own ID as merchant for receive
           amount: parseFloat(amount),
         },
         {
