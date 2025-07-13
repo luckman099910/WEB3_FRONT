@@ -1,568 +1,50 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Loader2, CheckCircle, AlertCircle, RotateCcw, Camera as CameraIcon, ArrowLeft } from 'lucide-react';
 import { registerPalmHash, safeJsonParse } from '../api/palmPayApi';
-// @ts-ignore
-import { Camera } from '@mediapipe/camera_utils';
 import { useNavigate } from 'react-router-dom';
-import { SignJWT } from 'jose';
-
-const STEADY_TIME = 5000; // ms (5 seconds steady)
-// 1. Fix GUIDE_BOX for 320x240 canvas
-const VIDEO_WIDTH = 480;
-const VIDEO_HEIGHT = 320;
-// Centered, larger guide box (proportional)
-const GUIDE_BOX = {
-  x: Math.round(VIDEO_WIDTH * 0.083),
-  y: Math.round(VIDEO_HEIGHT * 0.125),
-  w: Math.round(VIDEO_WIDTH * 0.83),
-  h: Math.round(VIDEO_HEIGHT * 0.75)
-};
+import PalmScanBox from './PalmScanBox';
 
 interface HandScanRegisterProps {
   onCancel?: () => void;
+  demoMode?: boolean;
 }
 
-const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const cameraSelectRef = useRef<HTMLSelectElement>(null);
-  
-  // State
-  const [currentLandmarks, setCurrentLandmarks] = useState<any>(null);
-  const [handInBox, setHandInBox] = useState(false);
-  const [steadyStart, setSteadyStart] = useState<number | null>(null);
+const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel, demoMode = false }) => {
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [cameraReady, setCameraReady] = useState(false);
-  const [cameraDevices, setCameraDevices] = useState<MediaDeviceInfo[]>([]);
-  const [currentStream, setCurrentStream] = useState<MediaStream | null>(null);
-  const [handsReady, setHandsReady] = useState(false);
-  
-  // MediaPipe instances
-  const handsRef = useRef<any>(null);
-  const cameraRef = useRef<any>(null);
-  
+  const [handInBox, setHandInBox] = useState(false);
+  const [feedbackMsg, setFeedbackMsg] = useState('Place your palm in the box and hold steady');
+  const [scanning, setScanning] = useState(false);
   const navigate = useNavigate();
 
-  const steadyStartRef = useRef<number | null>(null);
-  const handInBoxRef = useRef(false);
-
-  // Add at the top, after other hooks
-  const animationRef = useRef<number | null>(null);
-  const [borderAnimPos, setBorderAnimPos] = useState(0);
-  const [borderAnimDir, setBorderAnimDir] = useState(1); // 1 = down, -1 = up
-
-  // Normalize landmarks using proportional calculations (invariant to position, angle, distance)
-  function normalizeLandmarks(landmarks: any[]) {
-    if (!landmarks || landmarks.length !== 21) return landmarks;
-    
-    // Use wrist as reference point (landmark 0)
-    const wrist = landmarks[0];
-    
-    // Calculate palm width as the primary reference
-    const palmWidth = Math.sqrt(
-      Math.pow(landmarks[5].x - wrist.x, 2) + 
-      Math.pow(landmarks[5].y - wrist.y, 2) + 
-      Math.pow(landmarks[5].z - wrist.z, 2)
-    );
-    
-    // If palm width is too small, use a fallback reference
-    const referenceDistance = palmWidth > 0.01 ? palmWidth : 1;
-    
-    // Normalize all landmarks relative to wrist and palm width
-    return landmarks.map(p => ({
-      x: parseFloat(((p.x - wrist.x) / referenceDistance).toFixed(4)),
-      y: parseFloat(((p.y - wrist.y) / referenceDistance).toFixed(4)),
-      z: parseFloat(((p.z - wrist.z) / referenceDistance).toFixed(4))
-    }));
-  }
-
-  // Hash function (browser-compatible JWT)
-  async function hashPalm(landmarks: any[]) {
-    const norm = normalizeLandmarks(landmarks);
-    const json = JSON.stringify(norm);
-    const secret = new TextEncoder().encode('secret');
-    const jwt = await new SignJWT({ data: json })
-      .setProtectedHeader({ alg: 'HS256' })
-      .sign(secret);
-    return jwt;
-  }
-
-  // Check if all landmarks are inside the guide box (exact copy from HTML)
-  function isHandInBox(landmarks: any[]) {
-    if (!landmarks || !canvasRef.current) return false;
-    let inside = 0;
-    for (const p of landmarks) {
-      const x = p.x * canvasRef.current.width;
-      const y = p.y * canvasRef.current.height;
-      if (
-        x >= GUIDE_BOX.x + 4 &&
-        x <= GUIDE_BOX.x + GUIDE_BOX.w - 4 &&
-        y >= GUIDE_BOX.y + 4 &&
-        y <= GUIDE_BOX.y + GUIDE_BOX.h - 4
-      ) inside++;
-    }
-    // Allow up to 3 points outside the box
-    return inside >= landmarks.length - 3;
-  }
-
-  // Convert normalized landmark to canvas coordinates
-  function toCanvas(p: any) {
-    if (!canvasRef.current) return { x: 0, y: 0 };
-    return {
-      x: p.x * canvasRef.current.width,
-      y: p.y * canvasRef.current.height
-    };
-  }
-
-  // Replace drawOverlay with animated border logic
-  function drawOverlay(landmarks: any, handInBox: boolean, progress: number, animPos?: number) {
-    if (!canvasRef.current) return;
-    const ctx = canvasRef.current.getContext('2d');
-    if (!ctx) return;
-    ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-
-    // --- Four-corner border with glow ---
-    // Determine glow color
-    let glowColor = '#fff'; // idle
-    if (handInBox && progress < 1) glowColor = '#38bdf8'; // sky blue
-    if (handInBox && progress >= 1) glowColor = '#22c55e'; // green
-    ctx.save();
-    ctx.strokeStyle = glowColor;
-    ctx.shadowColor = glowColor;
-    ctx.shadowBlur = 16;
-    ctx.lineWidth = 5;
-    ctx.setLineDash([]);
-    const len = Math.max(20, Math.min(GUIDE_BOX.w, GUIDE_BOX.h) * 0.13); // corner length
-    // Top-left
-    ctx.beginPath();
-    ctx.moveTo(GUIDE_BOX.x, GUIDE_BOX.y + len);
-    ctx.lineTo(GUIDE_BOX.x, GUIDE_BOX.y);
-    ctx.lineTo(GUIDE_BOX.x + len, GUIDE_BOX.y);
-    ctx.stroke();
-    // Top-right
-    ctx.beginPath();
-    ctx.moveTo(GUIDE_BOX.x + GUIDE_BOX.w - len, GUIDE_BOX.y);
-    ctx.lineTo(GUIDE_BOX.x + GUIDE_BOX.w, GUIDE_BOX.y);
-    ctx.lineTo(GUIDE_BOX.x + GUIDE_BOX.w, GUIDE_BOX.y + len);
-    ctx.stroke();
-    // Bottom-left
-    ctx.beginPath();
-    ctx.moveTo(GUIDE_BOX.x, GUIDE_BOX.y + GUIDE_BOX.h - len);
-    ctx.lineTo(GUIDE_BOX.x, GUIDE_BOX.y + GUIDE_BOX.h);
-    ctx.lineTo(GUIDE_BOX.x + len, GUIDE_BOX.y + GUIDE_BOX.h);
-    ctx.stroke();
-    // Bottom-right
-    ctx.beginPath();
-    ctx.moveTo(GUIDE_BOX.x + GUIDE_BOX.w - len, GUIDE_BOX.y + GUIDE_BOX.h);
-    ctx.lineTo(GUIDE_BOX.x + GUIDE_BOX.w, GUIDE_BOX.y + GUIDE_BOX.h);
-    ctx.lineTo(GUIDE_BOX.x + GUIDE_BOX.w, GUIDE_BOX.y + GUIDE_BOX.h - len);
-    ctx.stroke();
-    ctx.restore();
-
-    // --- Animated scan line (sky blue) ---
-    if (handInBox && progress < 1 && typeof animPos === 'number') {
-      ctx.save();
-      ctx.strokeStyle = '#38bdf8';
-      ctx.shadowColor = '#38bdf8';
-      ctx.shadowBlur = 12;
-      ctx.lineWidth = 4;
-      const y = GUIDE_BOX.y + animPos;
-      ctx.beginPath();
-      ctx.moveTo(GUIDE_BOX.x + 8, y);
-      ctx.lineTo(GUIDE_BOX.x + GUIDE_BOX.w - 8, y);
-      ctx.stroke();
-      ctx.restore();
-    }
-
-    // Draw hand skeleton (unchanged)
-    if (landmarks) {
-      const connections = [
-        [0,1],[1,2],[2,3],[3,4],
-        [0,5],[5,6],[6,7],[7,8],
-        [5,9],[9,10],[10,11],[11,12],
-        [9,13],[13,14],[14,15],[15,16],
-        [13,17],[17,18],[18,19],[19,20],
-        [0,17]
-      ];
-      ctx.save();
-      ctx.strokeStyle = '#00CFFF';
-      ctx.lineWidth = 2.5;
-      ctx.setLineDash([]);
-      for (const [a, b] of connections) {
-        const pa = toCanvas(landmarks[a]);
-        const pb = toCanvas(landmarks[b]);
-        ctx.beginPath();
-        ctx.moveTo(pa.x, pa.y);
-        ctx.lineTo(pb.x, pb.y);
-        ctx.stroke();
-      }
-      ctx.restore();
-      ctx.save();
-      ctx.fillStyle = '#00FFB2';
-      for (const p of landmarks) {
-        const pt = toCanvas(p);
-        ctx.beginPath();
-        ctx.arc(pt.x, pt.y, 4, 0, 2 * Math.PI);
-        ctx.fill();
-      }
-      ctx.restore();
-    }
-  }
-
-  // MediaPipe callback (adapted from HTML)
-  function onResults(results: any) {
-    let handJustEntered = false;
-    let inBox = false;
-    let newProgress = 0;
-    if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-      setCurrentLandmarks(results.multiHandLandmarks[0]);
-      inBox = isHandInBox(results.multiHandLandmarks[0]);
-      if (inBox && !handInBoxRef.current) handJustEntered = true;
-      handInBoxRef.current = inBox;
-      setHandInBox(inBox);
-      // Print normalized landmarks every frame
-      const norm = normalizeLandmarks(results.multiHandLandmarks[0]);
-      console.log('[PalmPay] SCAN value (normalized landmarks):', norm);
-    } else {
-      setCurrentLandmarks(null);
-      handInBoxRef.current = false;
+  // Demo mode: always show palm outline and scanning bar
+  useEffect(() => {
+    if (demoMode) {
       setHandInBox(false);
+      setFeedbackMsg('Palm not aligned. Please adjust to fit inside the box.');
+      setScanning(true);
     }
-    
-    // Steady hand logic
-    if (inBox) {
-      if (!steadyStartRef.current || handJustEntered) steadyStartRef.current = Date.now();
-      newProgress = Math.min(1, (Date.now() - (steadyStartRef.current || Date.now())) / STEADY_TIME);
-      setProgress(newProgress);
-      
-      // Auto-register when progress reaches 1
-      if (newProgress >= 1 && !success && !loading) {
-        handleRegister();
-      }
-    } else {
-      steadyStartRef.current = null;
-      setProgress(0);
-    }
-    
-    // Draw overlay with latest computed values
-    drawOverlay(results.multiHandLandmarks?.[0], inBox, newProgress, borderAnimPos);
-  }
+  }, [demoMode]);
 
-  // Camera setup (adapted from HTML)
-  async function startCamera(deviceId?: string) {
-    if (currentStream) {
-      currentStream.getTracks().forEach(track => track.stop());
-    }
-    
-    let constraints = {
-      video: {
-        deviceId: deviceId ? { exact: deviceId } : undefined,
-        width: { ideal: 400 },
-        height: { ideal: 300 }
-      },
-      audio: false
-    };
-    
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      setCurrentStream(stream);
-      setCameraReady(true);
-      setError('');
-      
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
-      
-      // Dynamically load Camera from CDN if not present
-      // @ts-ignore
-      if (!(window as any).Camera) {
-        await new Promise((resolve, reject) => {
-          const script = document.createElement('script');
-          script.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js';
-          script.async = true;
-          script.onload = resolve;
-          script.onerror = reject;
-          document.body.appendChild(script);
-        });
-      }
-      // @ts-ignore
-      const CameraClass = (window as any).Camera;
-      if (videoRef.current && CameraClass) {
-        if (cameraRef.current) cameraRef.current.stop();
-        cameraRef.current = new CameraClass(videoRef.current, {
-          onFrame: async () => {
-            if (handsRef.current && videoRef.current) {
-              await handsRef.current.send({image: videoRef.current});
-            }
-          },
-          width: VIDEO_WIDTH,
-          height: VIDEO_HEIGHT
-        });
-        cameraRef.current.start();
-      }
-      
-    } catch (e: any) {
-      setError('Could not access camera: ' + e.message);
-      setCameraReady(false);
-    }
-  }
-
-  // Camera device selection
-  async function updateCameraList() {
-    try {
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const videoDevices = devices.filter(d => d.kind === 'videoinput');
-      setCameraDevices(videoDevices);
-      
-      if (videoDevices.length > 0) {
-        startCamera(videoDevices[0].deviceId);
-      }
-    } catch (e: any) {
-      setError('Could not enumerate cameras: ' + e.message);
-    }
-  }
-
-  // Handle camera selection change
-  const handleCameraChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    startCamera(event.target.value);
-  };
-
-  // Handle registration
-  const handleRegister = async () => {
-    if (!currentLandmarks || !handInBox || progress < 1) {
-      setError('Hold your hand steady in the box for 5 seconds to register.');
-      return;
-    }
-    const user = safeJsonParse(localStorage.getItem('user'), {});
-    const hasHandInfo = !!user.handinfo;
-    if (!user || !user.id) {
-      setError('User not logged in');
-      return;
-    }
-    setLoading(true);
-    setError('');
-    try {
-      const norm = normalizeLandmarks(currentLandmarks);
-      const hash = await hashPalm(norm);
-      // If user has handinfo, this is a manual scan (do not update palm_hash)
-      await registerPalmHash(user.id, hash);
-      setSuccess(true);
-      setError('');
-      setTimeout(() => navigate(-1), 1200); // Auto-return after success
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Palm registration failed.');
-      setSuccess(false);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Handle rescan
-  const handleRescan = () => {
-    setSuccess(false);
-    setError('');
-    setProgress(0);
-    steadyStartRef.current = null;
-    setCurrentLandmarks(null);
-    handInBoxRef.current = false;
-    setHandInBox(false);
-  };
-
-  // Cancel handler
-  const handleCancel = () => {
-    if (currentStream) {
-      currentStream.getTracks().forEach(track => track.stop());
-    }
-    if (cameraRef.current) {
-      cameraRef.current.stop();
-    }
-    if (onCancel) onCancel();
-  };
-
-  // Set canvas size
-  const resizeCanvas = () => {
-    if (canvasRef.current) {
-      // Responsive: use parent width up to max, maintain 3:2 aspect ratio
-      const parent = canvasRef.current.parentElement;
-      let width = VIDEO_WIDTH;
-      let height = VIDEO_HEIGHT;
-      if (parent) {
-        width = Math.min(parent.clientWidth, 640);
-        height = Math.round(width * 2 / 3);
-      }
-      canvasRef.current.width = width;
-      canvasRef.current.height = height;
-    }
-  };
-
-  // HTML-style: Only start scan after both scripts are loaded and WASM is ready
+  // Simulate scan success in demo mode
   useEffect(() => {
-    let isMounted = true;
-    let cameraInstance: any = null;
-    let handsInstance: any = null;
-    let firstResults = false;
-
-    async function setupPalmScan() {
-      // 1. Load MediaPipe Hands script
-      if (!(window as any).Hands) {
-        await new Promise((resolve, reject) => {
-          const script = document.createElement('script');
-          script.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.min.js';
-          script.async = true;
-          script.onload = resolve;
-          script.onerror = reject;
-          document.body.appendChild(script);
-        });
-      }
-      // 2. Load MediaPipe Camera script
-      if (!(window as any).Camera) {
-        await new Promise((resolve, reject) => {
-          const script = document.createElement('script');
-          script.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js';
-          script.async = true;
-          script.onload = resolve;
-          script.onerror = reject;
-          document.body.appendChild(script);
-        });
-      }
-      // 3. Get camera devices
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const videoDevices = devices.filter(d => d.kind === 'videoinput');
-      if (!isMounted) return;
-      setCameraDevices(videoDevices);
-      // 4. Start camera with first device
-      const deviceId = videoDevices[0]?.deviceId;
-      const constraints = {
-        video: true,
-        audio: false
-      };
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      setCurrentStream(stream);
-      setCameraReady(true);
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
-      // 5. Setup MediaPipe Hands
-      const HandsClass = (window as any).Hands;
-      handsInstance = new HandsClass({
-        locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
-      });
-      handsInstance.setOptions({
-        maxNumHands: 1,
-        modelComplexity: 1,
-        minDetectionConfidence: 0.7,
-        minTrackingConfidence: 0.7
-      });
-      handsInstance.onResults((results: any) => {
-        if (!firstResults) {
-          setHandsReady(true);
-          firstResults = true;
-          console.log('[PalmPay] MediaPipe Hands model loaded and first results received.');
-        }
-        let inBox = false;
-        let newProgress = 0;
-        let handJustEntered = false;
-        if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-          setCurrentLandmarks(results.multiHandLandmarks[0]);
-          inBox = isHandInBox(results.multiHandLandmarks[0]);
-          handJustEntered = inBox && !handInBoxRef.current;
-          handInBoxRef.current = inBox;
-          setHandInBox(inBox); // for UI
-          // Print normalized landmarks every frame
-          const norm = normalizeLandmarks(results.multiHandLandmarks[0]);
-          console.log('[PalmPay] SCAN value (normalized landmarks):', norm);
-        } else {
-          setCurrentLandmarks(null);
-          handInBoxRef.current = false;
-          setHandInBox(false);
-        }
-        // Steady hand logic (use ref for timer)
-        if (inBox) {
-          if (!steadyStartRef.current || handJustEntered) steadyStartRef.current = Date.now();
-          newProgress = Math.min(1, (Date.now() - (steadyStartRef.current || Date.now())) / STEADY_TIME);
-          setProgress(newProgress);
-          if (newProgress >= 1 && !success && !loading) {
-            handleRegister();
-          }
-        } else {
-          steadyStartRef.current = null;
-          setProgress(0);
-        }
-        // Draw overlay with latest computed values
-        drawOverlay(results.multiHandLandmarks?.[0], inBox, newProgress, borderAnimPos);
-      });
-      handsRef.current = handsInstance;
-      // 6. Start MediaPipe Camera
-      const CameraClass = (window as any).Camera;
-      if (videoRef.current && CameraClass) {
-        cameraInstance = new CameraClass(videoRef.current, {
-          onFrame: async () => {
-            if (handsInstance && videoRef.current) {
-              await handsInstance.send({ image: videoRef.current });
-            }
-          },
-          width: VIDEO_WIDTH,
-          height: VIDEO_HEIGHT
-        });
-        cameraInstance.start();
-        cameraRef.current = cameraInstance;
-        console.log('[PalmPay] Camera started.');
-      }
+    if (demoMode) {
+      const timer = setTimeout(() => {
+        setHandInBox(true);
+        setFeedbackMsg('Perfect! Scanning in progress…');
+        setScanning(true);
+        setTimeout(() => {
+          setProgress(1);
+          setSuccess(true);
+          setFeedbackMsg('Palm registered successfully!');
+        }, 2000);
+      }, 2000);
+      return () => clearTimeout(timer);
     }
-    setupPalmScan();
-    return () => {
-      isMounted = false;
-      if (cameraInstance) cameraInstance.stop();
-      if (handsInstance) handsInstance.close();
-      if (currentStream) currentStream.getTracks().forEach(track => track.stop());
-    };
-    // eslint-disable-next-line
-  }, []);
+  }, [demoMode]);
 
-  // Update progress effect
-  useEffect(() => {
-    if (handInBox && steadyStart) {
-      const newProgress = Math.min(1, (Date.now() - steadyStart) / STEADY_TIME);
-      setProgress(newProgress);
-    }
-  }, [handInBox, steadyStart]);
-
-  // Animation loop for border effect
-  useEffect(() => {
-    if (handInBox && progress < 1) {
-      let direction = 1;
-      let pos = 0;
-      const min = 0;
-      const max = GUIDE_BOX.h - 8;
-      const duration = 500; // ms for a full cycle (top to bottom or bottom to top)
-      let lastTimestamp = performance.now();
-      function animate(now: number) {
-        const elapsed = now - lastTimestamp;
-        lastTimestamp = now;
-        // Calculate how much to move per ms
-        const delta = ((max - min) / duration) * elapsed;
-        pos += direction * delta;
-        if (pos >= max) {
-          pos = max;
-          direction = -1;
-        } else if (pos <= min) {
-          pos = min;
-          direction = 1;
-        }
-        setBorderAnimPos(pos);
-        animationRef.current = requestAnimationFrame(animate);
-      }
-      animationRef.current = requestAnimationFrame(animate);
-      return () => {
-        if (animationRef.current) cancelAnimationFrame(animationRef.current);
-      };
-    } else {
-      setBorderAnimPos(0);
-    }
-  }, [handInBox, progress]);
+  // Real registration logic would go here (omitted for demo)
 
   return (
     <div className="bg-deep-navy text-text-primary h-[calc(100vh-5rem)] flex items-center justify-center">
@@ -576,106 +58,59 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
             <ArrowLeft className="w-5 h-5" />
             <span className="font-light">Back</span>
           </button>
-          <h2 className="text-2xl font-bold text-white text-center w-full">Hand Scan &amp; Verify</h2>
+          <h2 className="text-2xl font-bold text-white text-center w-full">Hand Scan &amp; Register</h2>
         </div>
-
-        {/* Camera Selection */}
-        <div className="mb-2 flex items-center gap-2">
-          <label htmlFor="cameraSelect" className="text-text-secondary text-sm">Camera:</label>
-          <select
-            ref={cameraSelectRef}
-            id="cameraSelect"
-            onChange={handleCameraChange}
-            className="bg-card-bg text-text-primary px-2 py-1 rounded border border-electric-blue/30 text-sm focus:outline-none focus:border-electric-blue"
-          >
-            {cameraDevices.map((device, idx) => (
-              <option key={device.deviceId} value={device.deviceId}>
-                {device.label || `Camera ${idx + 1}`}
-              </option>
-            ))}
-          </select>
+        {/* PalmScanBox */}
+        <PalmScanBox
+          isAligned={handInBox}
+          feedbackMsg={feedbackMsg}
+          demoMode={demoMode}
+          scanning={scanning}
+        />
+        {/* Progress Bar */}
+        <div className="w-full h-2 bg-deep-navy rounded mb-2 overflow-hidden mt-4">
+          <div
+            className="h-full bg-electric-blue transition-all duration-100 ease-out"
+            style={{ width: `${progress * 100}%` }}
+          />
         </div>
-
-        {/* Main Container */}
-        <div className="bg-card-bg rounded-xl p-3 shadow-xl">
-          {/* Video and Canvas */}
-          <div className="relative flex flex-col items-center justify-center bg-black rounded-2xl shadow-lg overflow-hidden mb-4 w-full" style={{ aspectRatio: '3/2', maxWidth: 640 }}>
-            <video
-              ref={videoRef}
-              className="absolute top-0 left-0 w-full h-full object-cover rounded-2xl"
-              style={{ aspectRatio: '3/2', maxWidth: '100%' }}
-              width={VIDEO_WIDTH}
-              height={VIDEO_HEIGHT}
-              autoPlay
-              playsInline
-              muted
-            />
-            <canvas
-              ref={canvasRef}
-              className="absolute top-0 left-0 w-full h-full pointer-events-none"
-              style={{ aspectRatio: '3/2', maxWidth: '100%' }}
-              width={VIDEO_WIDTH}
-              height={VIDEO_HEIGHT}
-            />
+        {/* Status Messages */}
+        {error && !success && (
+          <div className="mb-2 text-red-400 text-center text-sm flex items-center justify-center gap-1">
+            <AlertCircle size={16} />
+            {error}
           </div>
-
-          {/* Progress Bar */}
-          <div className="w-full h-2 bg-deep-navy rounded mb-2 overflow-hidden">
-            <div
-              className="h-full bg-electric-blue transition-all duration-100 ease-out"
-              style={{ width: `${progress * 100}%` }}
-            />
+        )}
+        {success && (
+          <div className="mb-2 text-fintech-green text-center text-sm flex items-center justify-center gap-1">
+            <CheckCircle size={16} />
+            Palm registered successfully!
           </div>
-
-          {/* Status Messages */}
-          {error && !success && (
-            <div className="mb-2 text-red-400 text-center text-sm flex items-center justify-center gap-1">
-              <AlertCircle size={16} />
-              {error}
-            </div>
-          )}
-          {success && (
-            <div className="mb-2 text-fintech-green text-center text-sm flex items-center justify-center gap-1">
-              <CheckCircle size={16} />
-              Palm registered successfully!
-            </div>
-          )}
-
-          {/* Action Buttons */}
-          <div className="flex gap-2 justify-center mb-1">
-            {!success ? (
-              <button
-                onClick={handleRegister}
-                disabled={!cameraReady || loading || progress < 1}
-                className="bg-electric-blue hover:bg-neon-aqua disabled:bg-gray-600 disabled:cursor-not-allowed text-black px-4 py-2 rounded text-sm font-medium transition-colors flex items-center gap-1"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" />
-                    Registering...
-                  </>
-        ) : (
-          <>
-                    <CameraIcon size={16} />
-                    Register Palm
-                  </>
-                )}
+        )}
+        {/* Action Buttons */}
+        <div className="flex gap-2 justify-center mb-1 mt-2">
+          {!success ? (
+            <button
+              onClick={() => {}}
+              disabled={demoMode || scanning || progress < 1}
+              className="bg-electric-blue hover:bg-neon-aqua disabled:bg-gray-600 disabled:cursor-not-allowed text-black px-4 py-2 rounded text-sm font-medium transition-colors flex items-center gap-1"
+            >
+              <CameraIcon size={16} />
+              Register Palm
             </button>
-            ) : (
-              <button
-                onClick={handleRescan}
-                className="bg-fintech-green hover:bg-neon-green text-black px-4 py-2 rounded text-sm font-medium transition-colors flex items-center gap-1"
-              >
-                <RotateCcw size={16} />
-                Scan Again
-              </button>
-            )}
-          </div>
-
-          {/* Instructions */}
-          <div className="text-center text-text-secondary text-xs">
-            Hold your hand steady inside the green box for 5 seconds to register your palm.
-          </div>
+          ) : (
+            <button
+              onClick={() => window.location.reload()}
+              className="bg-fintech-green hover:bg-neon-green text-black px-4 py-2 rounded text-sm font-medium transition-colors flex items-center gap-1"
+            >
+              <RotateCcw size={16} />
+              Scan Again
+            </button>
+          )}
+        </div>
+        {/* Instructions */}
+        <div className="text-center text-text-secondary text-xs mt-2">
+          Hold your hand steady inside the green box for 5 seconds to register your palm.
         </div>
       </div>
     </div>

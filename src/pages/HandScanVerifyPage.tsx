@@ -83,7 +83,7 @@ const HandScanVerifyPage = () => {
       {/* Full-page scan UI */}
       {!success && !retry && (
         <div className="flex flex-col items-center justify-center w-full h-full flex-1">
-          <HandScan onCancel={handleCancel} onSuccess={handleScanSuccess} />
+          <HandScan onCancel={handleCancel} onSuccess={handleScanSuccess} demoMode={true} />
         </div>
       )}
       {retry && !success && (

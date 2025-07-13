@@ -183,7 +183,7 @@ const AdminPage = () => {
         <h1 className="text-3xl font-bold text-white">Admin Dashboard</h1>
       </section>
       {/* Tabs */}
-      <div className="w-full max-w-3xl flex flex-col items-center">
+      <div className="w-full flex flex-col items-center" style={{width:"70%"}}>
         <div className="flex border-b border-electric-blue/30 mb-6 w-full justify-center">
           {tabList.map((tab, idx) => (
             <button
@@ -217,6 +217,7 @@ const AdminPage = () => {
                       <th className="py-2 px-3">Email</th>
                       <th className="py-2 px-3">Balance</th>
                       <th className="py-2 px-3">Role</th>
+                      <th className="py-2 px-3">Plam Registered</th>
                       <th className="py-2 px-3">Created</th>
                       <th className="py-2 px-3">Delete</th>
                     </tr>
@@ -228,6 +229,7 @@ const AdminPage = () => {
                         <td className="py-2 px-3">{u.email}</td>
                         <td className="py-2 px-3">{u.balance}</td>
                         <td className="py-2 px-3">{u.role}</td>
+                        <td className="py-2 px-3">{u.palm_hash?"YES":"NO"}</td>
                         <td className="py-2 px-3">{u.created_at?.slice(0, 10)}</td>
                         <td className="py-2 px-3">
                           <button

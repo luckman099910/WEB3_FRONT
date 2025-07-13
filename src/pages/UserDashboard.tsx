@@ -354,7 +354,7 @@ const UserDashboard = () => {
                     <span className="text-white font-ultralight">Palm Hash Preview</span>
                   </div>
                   {hasPalm ? (
-                    <p className="text-white/70 font-mono text-sm bg-white/10 p-3 rounded-2xl">{handinfo.slice(0, 10)}...{handinfo.slice(-6)}</p>
+                    <p className="text-white/70 font-mono text-sm bg-white/10 p-3 rounded-2xl">{handinfo}</p>
                   ) : (
                     <p className="text-yellow-400 font-mono text-sm bg-white/10 p-3 rounded-2xl">No biometric data found</p>
                   )}
