@@ -15,7 +15,6 @@ const ReceivePage = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [statusMsg, setStatusMsg] = useState('');
-  const [showRegisterPrompt, setShowRegisterPrompt] = useState(false);
   const navigate = useNavigate();
 
   // Get current user's information from localStorage
@@ -71,7 +70,7 @@ const ReceivePage = () => {
       }
     } catch (err: any) {
       console.error('Receive error:', err);
-      setError(err.response?.data?.message || 'Receive request failed. Please try again.');
+      setError(err.response?.data?.console.error|| 'Receive request failed. Please try again.');
     } finally {
       setLoading(false);
       setShowHandScan(false);
