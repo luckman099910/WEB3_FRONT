@@ -43,20 +43,32 @@ const ReceivePage = () => {
 
     try {
       const token = localStorage.getItem('session');
-
       if (!user.id || !token) {
         setError('Please login to continue.');
         setShowHandScan(false);
         return;
       }
-
-      // For receive, we'll create a demo transaction showing the user's receive info
-      setSuccess('Receive request processed!');
-      setStatusMsg(`Your receive details: Email: ${receiverEmail}${receiverPhone ? `, Phone: ${receiverPhone}` : ''}`);
-      
-      setTimeout(() => {
-        navigate('/user-dashboard');
-      }, 3000);
+      // Send receive request to backend (simulate as a transfer to self)
+      const response = await axios.post(
+        '/api/transfer',
+        {
+          receiverEmail,
+          amount: parseFloat(amount),
+          handData,
+        },
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        }
+      );
+      if (response.data && response.data.txid) {
+        setSuccess('Receive request processed!');
+        setStatusMsg(`Transaction ID: ${response.data.txid}`);
+        setTimeout(() => {
+          navigate('/user-dashboard');
+        }, 3000);
+      } else {
+        setError('Receive request failed. Please try again.');
+      }
     } catch (err: any) {
       console.error('Receive error:', err);
       setError(err.response?.data?.error || 'Receive request failed. Please try again.');
