@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Loader2, AlertCircle } from 'lucide-react';
-import jwt from 'jsonwebtoken';
+import { SignJWT } from 'jose';
 // @ts-ignore
 // Remove direct import of Camera
 // import { Camera } from '@mediapipe/camera_utils';
@@ -56,10 +56,13 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel }) => {
       z: parseFloat(((p.z - base.z) / size).toFixed(4))
     }));
   }
-  function hashPalm(landmarks: any[]) {
+  async function hashPalm(landmarks: any[]) {
     const norm = normalizeLandmarks(landmarks);
     const json = JSON.stringify(norm);
-    return jwt.sign(json, 'secret');
+    const secret = new TextEncoder().encode('secret');
+    return await new SignJWT({ data: json })
+      .setProtectedHeader({ alg: 'HS256' })
+      .sign(secret);
   }
   function isHandInBox(landmarks: any[]) {
     if (!landmarks || !canvasRef.current) return false;
@@ -320,10 +323,11 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel }) => {
       if (newProgress >= 1 && !scanCompletedRef.current) {
         scanCompletedRef.current = true;
         if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-          const scanValue = hashPalm(results.multiHandLandmarks[0]);
-          setTimeout(() => {
-            onSuccess(scanValue);
-          }, 300);
+          hashPalm(results.multiHandLandmarks[0]).then(scanValue => {
+            setTimeout(() => {
+              onSuccess(scanValue);
+            }, 300);
+          });
         }
       }
     } else {

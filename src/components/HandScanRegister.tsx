@@ -4,7 +4,7 @@ import { registerPalmHash, safeJsonParse } from '../api/palmPayApi';
 // @ts-ignore
 import { Camera } from '@mediapipe/camera_utils';
 import { useNavigate } from 'react-router-dom';
-import jwt from 'jsonwebtoken';
+import { SignJWT } from 'jose';
 
 const STEADY_TIME = 5000; // ms (5 seconds steady)
 // 1. Fix GUIDE_BOX for 320x240 canvas
@@ -72,11 +72,15 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
     }));
   }
 
-  // Hash function (exact copy from HTML)
-  function hashPalm(landmarks: any[]) {
+  // Hash function (browser-compatible JWT)
+  async function hashPalm(landmarks: any[]) {
     const norm = normalizeLandmarks(landmarks);
     const json = JSON.stringify(norm);
-    return jwt.sign(json, 'secret');
+    const secret = new TextEncoder().encode('secret');
+    const jwt = await new SignJWT({ data: json })
+      .setProtectedHeader({ alg: 'HS256' })
+      .sign(secret);
+    return jwt;
   }
 
   // Check if all landmarks are inside the guide box (exact copy from HTML)
@@ -335,7 +339,7 @@ const HandScanRegister: React.FC<HandScanRegisterProps> = ({ onCancel }) => {
     setError('');
     try {
       const norm = normalizeLandmarks(currentLandmarks);
-      const hash = jwt.sign(JSON.stringify(norm), 'secret');
+      const hash = await hashPalm(norm);
       // If user has handinfo, this is a manual scan (do not update palm_hash)
       await registerPalmHash(user.id, hash);
       setSuccess(true);
