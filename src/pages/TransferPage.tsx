@@ -55,29 +55,23 @@ const TransferPage = () => {
     setError('');
     setSuccess('');
     setStatusMsg('Processing transfer...');
-
     try {
       const user = JSON.parse(localStorage.getItem('user') || '{}');
       const token = localStorage.getItem('session');
-
       if (!user.id || !token) {
         setError('Please login to continue.');
         setShowHandScan(false);
         return;
       }
-
       const transferData: any = {
         amount: parseFloat(amount),
         handData,
         receiverEmail: transferMethod === 'email' ? receiverEmail : undefined,
         receiverPhone: transferMethod === 'phone' ? receiverPhone : undefined,
       };
-
-      // Remove undefined fields
       Object.keys(transferData).forEach(key => transferData[key] === undefined && delete transferData[key]);
-
+      await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
       const response = await api.post('/api/transfer', transferData);
-
       if (response.data.success || response.data.transaction) {
         setSuccess('Transfer completed successfully!');
         setStatusMsg(`Transaction ID: ${response.data.transaction?.id || response.data.transactionId}`);

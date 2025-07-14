@@ -31,6 +31,7 @@ const HandScanVerifyPage = () => {
           token = parsed.token || '';
         }
       }
+      await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
       const res = await axios.post(
         '/api/transfer',
         {

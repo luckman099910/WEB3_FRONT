@@ -17,6 +17,7 @@ const HandRegisterPage = () => {
     try {
       const user = JSON.parse(localStorage.getItem('user') || '{}');
       if (!user.id) throw new Error('User not found. Please log in.');
+      await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
       await registerPalmHash(user.id, jwt);
       setStatus('success');
       navigate(-1); // Go back on success

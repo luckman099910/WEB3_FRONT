@@ -40,7 +40,6 @@ const ReceivePage = () => {
     setError('');
     setSuccess('');
     setStatusMsg('Processing receive request...');
-
     try {
       const token = localStorage.getItem('session');
       if (!user.id || !token) {
@@ -48,7 +47,7 @@ const ReceivePage = () => {
         setShowHandScan(false);
         return;
       }
-      // Send receive request to backend using transfer endpoint
+      await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
       const response = await api.post('/api/transfer', {
         receiverEmail: user.email,
         amount: parseFloat(amount),
