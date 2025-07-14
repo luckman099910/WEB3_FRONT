@@ -15,7 +15,7 @@ const PalmScanBox: React.FC<PalmScanBoxProps> = ({ isAligned, feedbackMsg, demoM
   
   // Enhanced scan bar animation with blue light effect
   useEffect(() => {
-    if (!scanning || demoMode) return;
+    if (!isAligned || demoMode) return;
     let frame: number;
     let direction = 1;
     let pos = 10;
@@ -38,11 +38,11 @@ const PalmScanBox: React.FC<PalmScanBoxProps> = ({ isAligned, feedbackMsg, demoM
     }
     animate();
     return () => cancelAnimationFrame(frame);
-  }, [scanning, demoMode]);
+  }, [isAligned, demoMode]);
 
   // Blue light effect animation
   useEffect(() => {
-    if (!scanning || demoMode) return;
+    if (!isAligned || demoMode) return;
     let frame: number;
     let opacity = 0.3;
     let direction = 1;
@@ -63,7 +63,7 @@ const PalmScanBox: React.FC<PalmScanBoxProps> = ({ isAligned, feedbackMsg, demoM
     }
     animateLight();
     return () => cancelAnimationFrame(frame);
-  }, [scanning, demoMode]);
+  }, [isAligned, demoMode]);
 
   return (
     <div className="relative flex flex-col items-center w-full max-w-md mx-auto">
@@ -97,7 +97,7 @@ const PalmScanBox: React.FC<PalmScanBoxProps> = ({ isAligned, feedbackMsg, demoM
         }} />
         
         {/* Blue light effect overlay */}
-        {scanning && isAligned && (
+        {isAligned && (
           <div
             ref={lightEffectRef}
             className="absolute inset-0 z-25 pointer-events-none rounded-2xl"
@@ -112,14 +112,12 @@ const PalmScanBox: React.FC<PalmScanBoxProps> = ({ isAligned, feedbackMsg, demoM
         <div
           className="absolute inset-0 z-30 flex items-center justify-center transition-all duration-300"
           style={{
-            border: `4px solid ${scanning && isAligned ? '#22c55e' : isAligned ? '#22c55e' : '#ef4444'}`,
-            boxShadow: scanning && isAligned 
+            border: `4px solid ${isAligned ? '#22c55e' : '#ef4444'}`,
+            boxShadow: isAligned 
               ? '0 0 24px #22c55e, 0 0 48px rgba(34, 197, 94, 0.3), inset 0 0 20px rgba(34, 197, 94, 0.1)' 
-              : isAligned 
-                ? '0 0 24px #22c55e' 
-                : '0 0 24px #ef4444',
+              : '0 0 24px #ef4444',
             borderRadius: '2rem',
-            background: scanning && isAligned ? 'rgba(34, 197, 94, 0.05)' : 'rgba(16,19,28,0.2)',
+            background: isAligned ? 'rgba(34, 197, 94, 0.05)' : 'rgba(16,19,28,0.2)',
             width: '100%',
             height: '100%',
           }}
@@ -129,7 +127,7 @@ const PalmScanBox: React.FC<PalmScanBoxProps> = ({ isAligned, feedbackMsg, demoM
             src={handPng}
             alt="Palm Outline"
             className={`absolute object-contain opacity-90 pointer-events-none mx-auto my-auto transition-all duration-300 ${
-              scanning && isAligned ? 'filter brightness-110' : ''
+              isAligned ? 'filter brightness-110' : ''
             }`}
             draggable={false}
             style={{ width: '98%', height: '98%', left: '1%', top: '1%' }}
@@ -148,13 +146,13 @@ const PalmScanBox: React.FC<PalmScanBoxProps> = ({ isAligned, feedbackMsg, demoM
                 boxShadow: '0 0 20px 6px #38bdf8, 0 0 40px 12px #60a5fa, inset 0 0 10px rgba(59, 130, 246, 0.3)',
                 filter: 'blur(0.5px) brightness(1.2)',
                 transition: 'top 0.1s linear',
-                opacity: scanning ? 1 : 0.8,
+                opacity: 1,
               }}
             />
           )}
           
           {/* Additional scanning lines for enhanced effect */}
-          {scanning && isAligned && (
+          {isAligned && (
             <>
               <div
                 className="absolute left-[1%] right-[1%] h-1 rounded-full opacity-60"
