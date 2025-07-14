@@ -12,6 +12,7 @@ interface HandScanProps {
 }
 
 const HAND_SCAN_SECRET = 'secret'; // Must match backend
+const TIMER_SECONDS = 5;
 
 const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel, demoMode = false }) => {
   const [progress, setProgress] = useState(0);
@@ -22,10 +23,12 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel, demoMode = fal
   const [scanning, setScanning] = useState(false);
   const [timer, setTimer] = useState(0);
   const [scanComplete, setScanComplete] = useState(false);
+  const [backendMsg, setBackendMsg] = useState('');
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const lastLandmarks = useRef<any>(null);
+  const sentRef = useRef(false);
 
   // Camera and MediaPipe Hands setup
   useEffect(() => {
@@ -56,10 +59,12 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel, demoMode = fal
           setHandInBox(true);
           setFeedbackMsg('Hold steady to scan...');
           lastLandmarks.current = lm;
+          console.log('[PalmScan] Hand detected and aligned.');
         } else {
           setHandInBox(false);
           setFeedbackMsg('Place your palm in the box and hold steady');
           lastLandmarks.current = null;
+          if (timerRef.current) console.log('[PalmScan] Hand moved out, timer reset.');
         }
       });
       camera = new Camera(videoRef.current!, {
@@ -71,6 +76,7 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel, demoMode = fal
       });
       camera.start();
       setLoading(false);
+      console.log('[PalmScan] Camera and MediaPipe Hands started.');
     }
     setup();
     return () => {
@@ -81,6 +87,10 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel, demoMode = fal
         streamRef.current.getTracks().forEach(track => track.stop());
         streamRef.current = null;
       }
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
     };
   }, [demoMode]);
 
@@ -88,7 +98,7 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel, demoMode = fal
   useEffect(() => {
     if (scanComplete || demoMode) return;
     if (handInBox) {
-      if (timer === 0) setTimer(3); // 3 seconds
+      if (timer === 0) setTimer(TIMER_SECONDS);
       if (!timerRef.current) {
         timerRef.current = setInterval(() => {
           setTimer((t) => {
@@ -96,6 +106,7 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel, demoMode = fal
             return 0;
           });
         }, 1000);
+        console.log('[PalmScan] Timer started.');
       }
     } else {
       setTimer(0);
@@ -115,7 +126,7 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel, demoMode = fal
   // When timer reaches 0 and hand is still in box, capture and send
   useEffect(() => {
     if (scanComplete || demoMode) return;
-    if (timer === 0 && handInBox && lastLandmarks.current) {
+    if (timer === 0 && handInBox && lastLandmarks.current && !sentRef.current) {
       doScan(lastLandmarks.current);
     }
   }, [timer, handInBox, scanComplete, demoMode]);
@@ -124,6 +135,7 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel, demoMode = fal
     setScanComplete(true);
     setScanning(false);
     setFeedbackMsg('Scanning...');
+    sentRef.current = true;
     try {
       // Sign landmarks as JWT
       const payload = JSON.stringify(landmarks);
@@ -131,10 +143,23 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel, demoMode = fal
         .setProtectedHeader({ alg: 'HS256' })
         .sign(new TextEncoder().encode(HAND_SCAN_SECRET));
       setFeedbackMsg('Scan complete! Sending...');
-      onSuccess(jwt);
+      console.log('[PalmScan] Scan complete. JWT:', jwt);
+      // Example: send to backend (replace with your API call)
+      // You can use onSuccess(jwt) to trigger parent logic
+      const res = await fetch('/api/registerPalm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: 'USER_ID', handinfo: jwt }), // Replace USER_ID
+      });
+      const data = await res.json();
+      setBackendMsg(data.message || JSON.stringify(data));
+      console.log('[PalmScan] Backend response:', data);
+      onSuccess(jwt); // Optionally call parent
     } catch (err: any) {
       setError('Scan failed: ' + err.message);
       setScanComplete(false);
+      sentRef.current = false;
+      console.error('[PalmScan] Error:', err);
     }
   }
 
@@ -151,18 +176,20 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel, demoMode = fal
     const width = maxX - minX;
     const height = maxY - minY;
     // Center should be near 0.5,0.5; size should be reasonable
-    return (
+    const aligned = (
       centerX > 0.4 && centerX < 0.6 &&
       centerY > 0.4 && centerY < 0.6 &&
       width > 0.3 && width < 0.7 &&
       height > 0.3 && height < 0.7
     );
+    if (aligned) console.log('[PalmScan] Hand is aligned.');
+    return aligned;
   }
 
   return (
     <div className="flex flex-col items-center justify-center w-full max-w-2xl mx-auto">
       <PalmScanBox
-        isAligned={handInBox}
+        isAligned={handInBox && !scanComplete}
         feedbackMsg={feedbackMsg + (timer > 0 && handInBox && !scanComplete ? ` (${timer})` : '')}
         demoMode={demoMode}
         scanning={handInBox && !scanComplete}
@@ -182,11 +209,16 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel, demoMode = fal
       {/* Progress Bar */}
       <div className="w-full mt-4 flex flex-col items-center">
         <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden mb-2">
-          <div className="h-2 bg-gradient-to-r from-neon-green to-sky-blue rounded-full" style={{ width: `${Math.round(((3-timer)/3)*100)}%` }} />
+          <div className="h-2 bg-gradient-to-r from-neon-green to-sky-blue rounded-full" style={{ width: `${Math.round(((TIMER_SECONDS-timer)/TIMER_SECONDS)*100)}%` }} />
         </div>
         {error && (
           <div className="mt-2 p-2 rounded-xl bg-red-500/20 border border-red-500/30 text-red-400 flex items-center gap-2">
             {error}
+          </div>
+        )}
+        {backendMsg && (
+          <div className="mt-2 p-2 rounded-xl bg-green-500/20 border border-green-500/30 text-green-400 flex items-center gap-2">
+            {backendMsg}
           </div>
         )}
         <button
