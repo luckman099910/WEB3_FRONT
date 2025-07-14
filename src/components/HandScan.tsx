@@ -2,7 +2,6 @@ import React, { useRef, useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import { SignJWT } from 'jose';
 import PalmScanBox from './PalmScanBox';
-import { Camera } from '@mediapipe/camera_utils';
 
 interface HandScanProps {
   onSuccess: (scanValue: string) => void;
@@ -36,17 +35,24 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel, demoMode = fal
       return;
     }
     setLoading(true);
-    let camera: Camera | null = null;
+    let camera: any = null;
     let stopped = false;
     let hands: any = null;
-    let script: HTMLScriptElement | null = null;
+    let handsScript: HTMLScriptElement | null = null;
+    let cameraScript: HTMLScriptElement | null = null;
 
     function setupPalmScan() {
-      // Use window.Hands from CDN
+      // Use window.Hands and window.Camera from CDN
       const Hands = (window as any).Hands;
+      const Camera = (window as any).Camera;
       console.log('[PalmScan] window.Hands:', Hands);
+      console.log('[PalmScan] window.Camera:', Camera);
       if (!Hands) {
         setError('Palm detection module failed to load (window.Hands not found).');
+        return;
+      }
+      if (!Camera) {
+        setError('Camera module failed to load (window.Camera not found).');
         return;
       }
       hands = new Hands({
@@ -85,19 +91,31 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel, demoMode = fal
       console.log('[PalmScan] Camera and MediaPipe Hands started.');
     }
 
-    // Dynamically load hands.js from CDN
-    script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js';
-    script.async = true;
-    script.onload = () => {
-      console.log('[PalmScan] hands.js loaded from CDN');
-      setupPalmScan();
+    // Dynamically load camera_utils.js from CDN first
+    cameraScript = document.createElement('script');
+    cameraScript.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js';
+    cameraScript.async = true;
+    cameraScript.onload = () => {
+      console.log('[PalmScan] camera_utils.js loaded from CDN');
+      // Now load hands.js
+      handsScript = document.createElement('script');
+      handsScript.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js';
+      handsScript.async = true;
+      handsScript.onload = () => {
+        console.log('[PalmScan] hands.js loaded from CDN');
+        setupPalmScan();
+      };
+      handsScript.onerror = () => {
+        setError('Failed to load palm detection script.');
+        setLoading(false);
+      };
+      document.body.appendChild(handsScript);
     };
-    script.onerror = () => {
-      setError('Failed to load palm detection script.');
+    cameraScript.onerror = () => {
+      setError('Failed to load camera script.');
       setLoading(false);
     };
-    document.body.appendChild(script);
+    document.body.appendChild(cameraScript);
 
     return () => {
       stopped = true;
@@ -110,7 +128,8 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel, demoMode = fal
         clearInterval(timerRef.current);
         timerRef.current = null;
       }
-      if (script) document.body.removeChild(script);
+      if (handsScript) document.body.removeChild(handsScript);
+      if (cameraScript) document.body.removeChild(cameraScript);
     };
   }, [demoMode]);
 
