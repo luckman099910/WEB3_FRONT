@@ -15,8 +15,6 @@ const ReceivePage = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [statusMsg, setStatusMsg] = useState('');
-  const [retry, setRetry] = useState(false);
-  const [scanComplete, setScanComplete] = useState(false);
   const navigate = useNavigate();
 
   // Get current user's information from localStorage
@@ -41,6 +39,7 @@ const ReceivePage = () => {
     setError('');
     setSuccess('');
     setStatusMsg('Processing receive request...');
+
     try {
       const token = localStorage.getItem('session');
       if (!user.id || !token) {
@@ -48,7 +47,7 @@ const ReceivePage = () => {
         setShowHandScan(false);
         return;
       }
-      await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
+      // Send receive request to backend using transfer endpoint
       const response = await api.post('/api/transfer', {
         receiverEmail: user.email,
         amount: parseFloat(amount),
@@ -57,16 +56,15 @@ const ReceivePage = () => {
       if (response.data && response.data.transaction) {
         setSuccess('Receive request processed!');
         setStatusMsg(`Transaction ID: ${response.data.transaction.id}`);
-        setScanComplete(true);
-        setShowHandScan(false);
+        setTimeout(() => {
+          navigate('/user-dashboard');
+        }, 3000);
       } else {
         setError('Receive request failed. Please try again.');
-        setRetry(true);
       }
     } catch (err: any) {
       console.error('Receive error:', err);
       setError(err.response?.data?.error || err.message || 'Receive request failed. Please try again.');
-      setRetry(true);
     } finally {
       setLoading(false);
       setShowHandScan(false);
@@ -78,19 +76,6 @@ const ReceivePage = () => {
     setError('');
     setSuccess('');
     setStatusMsg('');
-  };
-
-  const handleRetry = () => {
-    setRetry(false);
-    setError('');
-    setSuccess('');
-    setStatusMsg('');
-    setScanComplete(false);
-    setShowHandScan(true);
-  };
-
-  const handleReturn = () => {
-    navigate(-1);
   };
 
   if (showHandScan) {
@@ -106,35 +91,10 @@ const ReceivePage = () => {
                 <span>Back to Receive</span>
               </button>
             </div>
-            {!retry && !scanComplete && (
-              <HandScan
-                onSuccess={handleHandScanSuccess}
-                onCancel={handleCancel}
-              />
-            )}
-            {retry && (
-              <div className="flex flex-col items-center justify-center w-full h-full flex-1">
-                <button
-                  onClick={handleRetry}
-                  className="px-6 py-3 rounded-full bg-gradient-to-r from-neon-green to-sky-blue text-black font-medium hover:shadow-lg hover:shadow-neon-green/25 transition-all duration-300 mt-8"
-                >
-                  Re-register
-                </button>
-              </div>
-            )}
-            {scanComplete && (
-              <div className="flex flex-col items-center justify-center w-full h-full flex-1">
-                <div className="mb-4 p-4 rounded-2xl bg-green-500/20 border border-green-500/30 text-green-400 text-center">
-                  <p>Receive request processed!</p>
-                  <button
-                    onClick={handleReturn}
-                    className="mt-4 px-6 py-2 rounded-full bg-gradient-to-r from-neon-green to-sky-blue text-black font-medium hover:shadow-lg transition-all duration-300"
-                  >
-                    Return
-                  </button>
-                </div>
-              </div>
-            )}
+            <HandScan
+              onSuccess={handleHandScanSuccess}
+              onCancel={handleCancel}
+            />
           </div>
         </div>
       </Layout>
