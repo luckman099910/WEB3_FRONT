@@ -2,10 +2,6 @@ import React, { useRef, useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import { SignJWT } from 'jose';
 import PalmScanBox from './PalmScanBox';
-import HandsModule from '@mediapipe/hands';
-// Fix for MediaPipe Hands import in Vite/ESM (handles both ESM and CJS)
-// @ts-ignore
-const Hands = HandsModule.Hands || (HandsModule as any).default?.Hands;
 import { Camera } from '@mediapipe/camera_utils';
 
 interface HandScanProps {
@@ -42,17 +38,19 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel, demoMode = fal
     setLoading(true);
     let camera: Camera | null = null;
     let stopped = false;
+    let hands: any = null;
+    let script: HTMLScriptElement | null = null;
 
-    async function setup() {
-      console.log('[PalmScan] HandsModule:', HandsModule);
-      console.log('[PalmScan] Hands:', Hands);
+    function setupPalmScan() {
+      // Use window.Hands from CDN
+      const Hands = (window as any).Hands;
+      console.log('[PalmScan] window.Hands:', Hands);
       if (!Hands) {
-        console.error('[PalmScan] Hands constructor not found in HandsModule!');
-        setError('Palm detection module failed to load.');
+        setError('Palm detection module failed to load (window.Hands not found).');
         return;
       }
-      const hands = new Hands({
-        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
+      hands = new Hands({
+        locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
       });
       hands.setOptions({
         maxNumHands: 1,
@@ -63,7 +61,6 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel, demoMode = fal
       hands.onResults((results: any) => {
         if (stopped) return;
         const lm = results.multiHandLandmarks && results.multiHandLandmarks[0];
-        // Check if hand is in the center and roughly matches the scan box
         if (lm && isHandAligned(lm)) {
           setHandInBox(true);
           setFeedbackMsg('Hold steady to scan...');
@@ -78,7 +75,7 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel, demoMode = fal
       });
       camera = new Camera(videoRef.current!, {
         onFrame: async () => {
-          await hands!.send({ image: videoRef.current! });
+          await hands.send({ image: videoRef.current! });
         },
         width: 640,
         height: 480,
@@ -87,7 +84,21 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel, demoMode = fal
       setLoading(false);
       console.log('[PalmScan] Camera and MediaPipe Hands started.');
     }
-    setup();
+
+    // Dynamically load hands.js from CDN
+    script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js';
+    script.async = true;
+    script.onload = () => {
+      console.log('[PalmScan] hands.js loaded from CDN');
+      setupPalmScan();
+    };
+    script.onerror = () => {
+      setError('Failed to load palm detection script.');
+      setLoading(false);
+    };
+    document.body.appendChild(script);
+
     return () => {
       stopped = true;
       if (camera) camera.stop();
@@ -99,6 +110,7 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel, demoMode = fal
         clearInterval(timerRef.current);
         timerRef.current = null;
       }
+      if (script) document.body.removeChild(script);
     };
   }, [demoMode]);
 
