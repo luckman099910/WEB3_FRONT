@@ -2,14 +2,16 @@ import React, { useRef, useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import { SignJWT } from 'jose';
 import PalmScanBox from './PalmScanBox';
-
-const STEADY_TIME = 3000; // ms (3 seconds steady for scan)
+import { Hands } from '@mediapipe/hands';
+import { Camera } from '@mediapipe/camera_utils';
 
 interface HandScanProps {
   onSuccess: (scanValue: string) => void;
   onCancel?: () => void;
   demoMode?: boolean;
 }
+
+const HAND_SCAN_SECRET = 'secret'; // Must match backend
 
 const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel, demoMode = false }) => {
   const [progress, setProgress] = useState(0);
@@ -18,29 +20,63 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel, demoMode = fal
   const [handInBox, setHandInBox] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState('Place your palm in the box and hold steady');
   const [scanning, setScanning] = useState(false);
+  const [timer, setTimer] = useState(0);
+  const [scanComplete, setScanComplete] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const lastLandmarks = useRef<any>(null);
 
-  // Camera setup (only if not demoMode)
+  // Camera and MediaPipe Hands setup
   useEffect(() => {
     if (demoMode) {
       setLoading(false);
       return;
     }
     setLoading(true);
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
-      .then((stream) => {
-        streamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
-        setLoading(false);
-      })
-      .catch((err) => {
-        setError('Could not access camera: ' + err.message);
-        setLoading(false);
+    let hands: Hands | null = null;
+    let camera: Camera | null = null;
+    let stopped = false;
+
+    async function setup() {
+      hands = new Hands({
+        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
       });
+      hands.setOptions({
+        maxNumHands: 1,
+        modelComplexity: 1,
+        minDetectionConfidence: 0.7,
+        minTrackingConfidence: 0.7,
+      });
+      hands.onResults((results) => {
+        if (stopped) return;
+        const lm = results.multiHandLandmarks && results.multiHandLandmarks[0];
+        // Check if hand is in the center and roughly matches the scan box
+        if (lm && isHandAligned(lm)) {
+          setHandInBox(true);
+          setFeedbackMsg('Hold steady to scan...');
+          lastLandmarks.current = lm;
+        } else {
+          setHandInBox(false);
+          setFeedbackMsg('Place your palm in the box and hold steady');
+          lastLandmarks.current = null;
+        }
+      });
+      camera = new Camera(videoRef.current!, {
+        onFrame: async () => {
+          await hands!.send({ image: videoRef.current! });
+        },
+        width: 640,
+        height: 480,
+      });
+      camera.start();
+      setLoading(false);
+    }
+    setup();
     return () => {
+      stopped = true;
+      if (camera) camera.stop();
+      if (hands) hands.close();
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
         streamRef.current = null;
@@ -48,60 +84,105 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel, demoMode = fal
     };
   }, [demoMode]);
 
-  // Demo mode: always show palm outline and scanning bar
+  // Timer logic: start when hand is in box, reset if not
   useEffect(() => {
-    if (demoMode) {
-      setLoading(false);
-      setHandInBox(false);
-      setFeedbackMsg('Palm not aligned. Please adjust to fit inside the box.');
-      setScanning(true);
+    if (scanComplete || demoMode) return;
+    if (handInBox) {
+      if (timer === 0) setTimer(3); // 3 seconds
+      if (!timerRef.current) {
+        timerRef.current = setInterval(() => {
+          setTimer((t) => {
+            if (t > 0) return t - 1;
+            return 0;
+          });
+        }, 1000);
+      }
+    } else {
+      setTimer(0);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
     }
-  }, [demoMode]);
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, [handInBox, scanComplete, demoMode]);
 
-  // Simulate scan success in demo mode
+  // When timer reaches 0 and hand is still in box, capture and send
   useEffect(() => {
-    if (demoMode) {
-      const timer = setTimeout(() => {
-        setHandInBox(true);
-        setFeedbackMsg('Perfect! Scanning in progress…');
-        setScanning(true);
-        setTimeout(() => {
-          setProgress(1);
-          onSuccess('demo-scan-value');
-        }, 2000);
-      }, 2000);
-      return () => clearTimeout(timer);
+    if (scanComplete || demoMode) return;
+    if (timer === 0 && handInBox && lastLandmarks.current) {
+      doScan(lastLandmarks.current);
     }
-  }, [demoMode, onSuccess]);
+  }, [timer, handInBox, scanComplete, demoMode]);
 
-  // Real camera/detection logic would go here (omitted for demo)
+  async function doScan(landmarks: any) {
+    setScanComplete(true);
+    setScanning(false);
+    setFeedbackMsg('Scanning...');
+    try {
+      // Sign landmarks as JWT
+      const payload = JSON.stringify(landmarks);
+      const jwt = await new SignJWT({ data: payload })
+        .setProtectedHeader({ alg: 'HS256' })
+        .sign(new TextEncoder().encode(HAND_SCAN_SECRET));
+      setFeedbackMsg('Scan complete! Sending...');
+      onSuccess(jwt);
+    } catch (err: any) {
+      setError('Scan failed: ' + err.message);
+      setScanComplete(false);
+    }
+  }
+
+  // Hand alignment check (basic: hand center in box, hand size reasonable)
+  function isHandAligned(lm: any[]): boolean {
+    // Get bounding box
+    const xs = lm.map((p) => p.x);
+    const ys = lm.map((p) => p.y);
+    const minX = Math.min(...xs), maxX = Math.max(...xs);
+    const minY = Math.min(...ys), maxY = Math.max(...ys);
+    // Center and size thresholds (tweak as needed)
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+    const width = maxX - minX;
+    const height = maxY - minY;
+    // Center should be near 0.5,0.5; size should be reasonable
+    return (
+      centerX > 0.4 && centerX < 0.6 &&
+      centerY > 0.4 && centerY < 0.6 &&
+      width > 0.3 && width < 0.7 &&
+      height > 0.3 && height < 0.7
+    );
+  }
 
   return (
     <div className="flex flex-col items-center justify-center w-full max-w-2xl mx-auto">
-      {/* Video Feed (only if not demoMode) */}
-      {!demoMode && (
-        <div className="relative w-full flex justify-center items-center" style={{ minHeight: 400 }}>
-          <video
-            ref={videoRef}
-            autoPlay
-            playsInline
-            muted
-            className="absolute top-0 left-0 w-full h-full object-cover rounded-2xl z-0"
-            style={{ background: '#10131c', maxHeight: 400 }}
-          />
-        </div>
-      )}
-      {/* Feedback and scan box */}
       <PalmScanBox
         isAligned={handInBox}
-        feedbackMsg={feedbackMsg}
+        feedbackMsg={feedbackMsg + (timer > 0 && handInBox && !scanComplete ? ` (${timer})` : '')}
         demoMode={demoMode}
-        scanning={scanning}
+        scanning={handInBox && !scanComplete}
+        videoElement={
+          !demoMode ? (
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className="w-full h-full object-cover rounded-2xl"
+              style={{ background: '#10131c', maxHeight: 400 }}
+            />
+          ) : null
+        }
       />
       {/* Progress Bar */}
       <div className="w-full mt-4 flex flex-col items-center">
         <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden mb-2">
-          <div className="h-2 bg-gradient-to-r from-neon-green to-sky-blue rounded-full" style={{ width: `${Math.round(progress * 100)}%` }} />
+          <div className="h-2 bg-gradient-to-r from-neon-green to-sky-blue rounded-full" style={{ width: `${Math.round(((3-timer)/3)*100)}%` }} />
         </div>
         {error && (
           <div className="mt-2 p-2 rounded-xl bg-red-500/20 border border-red-500/30 text-red-400 flex items-center gap-2">
@@ -112,6 +193,7 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel, demoMode = fal
           type="button"
           onClick={onCancel}
           className="mt-4 px-6 py-2 rounded-full bg-white/10 text-white font-medium hover:bg-white/20 transition-all duration-300"
+          disabled={scanComplete}
         >
           Cancel
         </button>
