@@ -2,7 +2,8 @@ import React, { useRef, useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import { SignJWT } from 'jose';
 import PalmScanBox from './PalmScanBox';
-import { Hands } from '@mediapipe/hands';
+import * as HandsModule from '@mediapipe/hands';
+const Hands = HandsModule.Hands;
 import { Camera } from '@mediapipe/camera_utils';
 
 interface HandScanProps {
@@ -37,11 +38,17 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel, demoMode = fal
       return;
     }
     setLoading(true);
-    let hands: Hands | null = null;
+    let hands: any = null;
     let camera: Camera | null = null;
     let stopped = false;
 
     async function setup() {
+      console.log('[PalmScan] HandsModule:', HandsModule);
+      if (!Hands) {
+        console.error('[PalmScan] Hands constructor not found in HandsModule!');
+        setError('Palm detection module failed to load.');
+        return;
+      }
       hands = new Hands({
         locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
       });
@@ -51,7 +58,7 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel, demoMode = fal
         minDetectionConfidence: 0.7,
         minTrackingConfidence: 0.7,
       });
-      hands.onResults((results) => {
+      hands.onResults((results: any) => {
         if (stopped) return;
         const lm = results.multiHandLandmarks && results.multiHandLandmarks[0];
         // Check if hand is in the center and roughly matches the scan box
