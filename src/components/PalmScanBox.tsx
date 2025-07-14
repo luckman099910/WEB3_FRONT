@@ -49,11 +49,17 @@ const PalmScanBox: React.FC<PalmScanBoxProps> = ({ isAligned, feedbackMsg, demoM
             {videoElement}
           </div>
         )}
-        {/* Mask overlay */}
-        <div className="absolute inset-0 z-10 rounded-2xl pointer-events-none" style={{background: 'rgba(16,19,28,0.5)'}} />
+        {/* Blur effect outside palm SVG but inside scan box */}
+        <div className="absolute inset-0 z-20 pointer-events-none" style={{
+          filter: 'blur(6px)',
+          background: 'rgba(16,19,28,0.5)',
+          maskImage: 'radial-gradient(circle at 50% 50%, transparent 60%, black 100%)',
+          WebkitMaskImage: 'radial-gradient(circle at 50% 50%, transparent 60%, black 100%)',
+          borderRadius: '2rem',
+        }} />
         {/* Scan Box border */}
         <div
-          className="absolute left-1/2 top-1/2 z-20 flex items-center justify-center"
+          className="absolute left-1/2 top-1/2 z-30 flex items-center justify-center"
           style={{
             width: '320px',
             height: '400px',
@@ -64,20 +70,27 @@ const PalmScanBox: React.FC<PalmScanBoxProps> = ({ isAligned, feedbackMsg, demoM
             background: 'rgba(16,19,28,0.2)',
           }}
         >
-          {/* Palm Outline SVG (larger) */}
+          {/* Palm Outline SVG (fill 90-95% of scan box) */}
           <img
             src={palmOutline}
             alt="Palm Outline"
-            className="absolute inset-0 w-[90%] h-[90%] object-contain opacity-90 pointer-events-none mx-auto my-auto"
+            className="absolute inset-0 object-contain opacity-90 pointer-events-none mx-auto my-auto"
             draggable={false}
-            style={{ left: '5%', top: '5%' }}
+            style={{ width: '92%', height: '92%', left: '4%', top: '4%' }}
           />
           {/* Scanning Bar (only if isAligned) */}
           {isAligned && (
             <div
               ref={scanBarRef}
-              className="absolute left-6 right-6 h-4 rounded bg-gradient-to-r from-sky-400 to-blue-400 shadow-lg opacity-90"
-              style={{ top: '10px', transition: 'top 0.1s linear' }}
+              className="absolute left-[2.5%] right-[2.5%] h-2 rounded-full bg-gradient-to-r from-sky-400 to-blue-400 shadow-lg opacity-90"
+              style={{
+                top: '10px',
+                width: '95%',
+                border: '2px solid #60a5fa',
+                boxShadow: '0 0 16px 4px #38bdf8, 0 0 32px 8px #60a5fa',
+                filter: 'blur(0.5px) brightness(1.5)',
+                transition: 'top 0.1s linear',
+              }}
             />
           )}
         </div>
