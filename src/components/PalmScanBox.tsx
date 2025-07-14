@@ -55,11 +55,11 @@ const PalmScanBox: React.FC<PalmScanBoxProps> = ({ isAligned, feedbackMsg, demoM
         <div
           className="absolute left-1/2 top-1/2 z-20 flex items-center justify-center"
           style={{
-            width: '320px', // Larger scan box
+            width: '320px',
             height: '400px',
             transform: 'translate(-50%, -50%)',
-            border: `4px solid ${isAligned ? '#22c55e' : '#3b82f6'}`,
-            boxShadow: isAligned ? '0 0 24px #22c55e' : '0 0 24px #3b82f6',
+            border: `4px solid ${isAligned ? '#22c55e' : '#ef4444'}`,
+            boxShadow: isAligned ? '0 0 24px #22c55e' : '0 0 24px #ef4444',
             borderRadius: '2rem',
             background: 'rgba(16,19,28,0.2)',
           }}
@@ -72,8 +72,8 @@ const PalmScanBox: React.FC<PalmScanBoxProps> = ({ isAligned, feedbackMsg, demoM
             draggable={false}
             style={{ left: '5%', top: '5%' }}
           />
-          {/* Scanning Bar (only if scanning and not registration) */}
-          {scanning && !demoMode && (
+          {/* Scanning Bar (only if isAligned) */}
+          {isAligned && (
             <div
               ref={scanBarRef}
               className="absolute left-6 right-6 h-4 rounded bg-gradient-to-r from-sky-400 to-blue-400 shadow-lg opacity-90"
