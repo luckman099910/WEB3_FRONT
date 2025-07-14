@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import palmOutline from '../assets/palm-outline.svg';
+import handPng from '../assets/hand.png';
 
 interface PalmScanBoxProps {
   isAligned: boolean;
@@ -71,7 +71,7 @@ const PalmScanBox: React.FC<PalmScanBoxProps> = ({ isAligned, feedbackMsg, demoM
         >
           {/* Palm Outline SVG (fill 98% of scan box) */}
           <img
-            src={palmOutline}
+            src={handPng}
             alt="Palm Outline"
             className="absolute object-contain opacity-90 pointer-events-none mx-auto my-auto"
             draggable={false}

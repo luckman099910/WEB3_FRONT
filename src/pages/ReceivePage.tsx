@@ -4,7 +4,7 @@ import Layout from '../components/Layout';
 import HandScan from '../components/HandScan';
 import { motion } from 'framer-motion';
 import { Download, Mail, Phone } from 'lucide-react';
-import axios from 'axios';
+import { api } from '../api/palmPayApi';
 // @ts-ignore
 import config from '../config';
 
@@ -48,17 +48,11 @@ const ReceivePage = () => {
         return;
       }
       // Send receive request to backend using transfer endpoint
-      const response = await axios.post(
-        `${config.API_BASE_URL}/api/transfer`,
-        {
-          receiverEmail: user.email,
-          amount: parseFloat(amount),
-          handData,
-        },
-        {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        }
-      );
+      const response = await api.post('/api/transfer', {
+        receiverEmail: user.email,
+        amount: parseFloat(amount),
+        handData,
+      });
       if (response.data && response.data.transaction) {
         setSuccess('Receive request processed!');
         setStatusMsg(`Transaction ID: ${response.data.transaction.id}`);
@@ -70,7 +64,7 @@ const ReceivePage = () => {
       }
     } catch (err: any) {
       console.error('Receive error:', err);
-      setError(err.response?.data?.error || 'Receive request failed. Please try again.');
+      setError(err.response?.data?.error || err.message || 'Receive request failed. Please try again.');
     } finally {
       setLoading(false);
       setShowHandScan(false);

@@ -4,7 +4,7 @@ import Layout from '../components/Layout';
 import HandScan from '../components/HandScan';
 import { motion } from 'framer-motion';
 import { Send, Hand, ArrowLeft, Mail, Phone } from 'lucide-react';
-import axios from 'axios';
+import { api } from '../api/palmPayApi';
 // @ts-ignore
 import config from '../config';
 
@@ -63,31 +63,23 @@ const TransferPage = () => {
         setError('Please login to continue.');
         setShowHandScan(false);
         return;
-        }
+      }
 
-      const transferData = {
+      const transferData: any = {
         amount: parseFloat(amount),
-          handData,
-        ...(transferMethod === 'email' 
-          ? { receiverEmail } 
-          : { receiverPhone }
-        )
+        handData,
+        receiverEmail: transferMethod === 'email' ? receiverEmail : undefined,
+        receiverPhone: transferMethod === 'phone' ? receiverPhone : undefined,
       };
 
-      const response = await axios.post(
-        `${config.API_BASE_URL}/api/transfer`,
-        transferData,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
+      // Remove undefined fields
+      Object.keys(transferData).forEach(key => transferData[key] === undefined && delete transferData[key]);
 
-      if (response.data.success) {
+      const response = await api.post('/api/transfer', transferData);
+
+      if (response.data.success || response.data.transaction) {
         setSuccess('Transfer completed successfully!');
-        setStatusMsg(`Transaction ID: ${response.data.transaction.id}`);
+        setStatusMsg(`Transaction ID: ${response.data.transaction?.id || response.data.transactionId}`);
         setTimeout(() => {
           navigate('/user-dashboard');
         }, 3000);
@@ -96,7 +88,7 @@ const TransferPage = () => {
       }
     } catch (err: any) {
       console.error('Transfer error:', err);
-      setError(err.response?.data?.error || 'Transfer failed. Please try again.');
+      setError(err.response?.data?.error || err.message || 'Transfer failed. Please try again.');
     } finally {
       setLoading(false);
       setShowHandScan(false);
