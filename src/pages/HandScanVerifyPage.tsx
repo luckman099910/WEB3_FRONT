@@ -14,6 +14,7 @@ const HandScanVerifyPage = () => {
   const [loading, setLoading] = useState(false);
   const [retry, setRetry] = useState(false);
   const [showHandScan, setShowHandScan] = useState(true);
+  const [scanComplete, setScanComplete] = useState(false);
 
   const handleScanSuccess = async (handData: string) => {
     setLoading(true);
@@ -43,8 +44,9 @@ const HandScanVerifyPage = () => {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         }
       );
-      // On success, go back
-      navigate(-1);
+      // On success, show completion state
+      setScanComplete(true);
+      setShowHandScan(false);
     } catch (err: any) {
       if (err.response?.data?.error?.includes('Sender not found')) {
         setError('User not found. Please try again.');
@@ -68,6 +70,7 @@ const HandScanVerifyPage = () => {
     setError('');
     setSuccess('');
     setStatusMsg('');
+    setScanComplete(false);
     setShowHandScan(true);
   };
 
@@ -82,7 +85,7 @@ const HandScanVerifyPage = () => {
         )}
       </div>
       {/* Full-page scan UI */}
-      {showHandScan && !retry && (
+      {showHandScan && !retry && !scanComplete && (
         <div className="flex flex-col items-center justify-center w-full h-full flex-1">
           <HandScan onCancel={handleCancel} onSuccess={handleScanSuccess} demoMode={true} />
         </div>
@@ -95,6 +98,19 @@ const HandScanVerifyPage = () => {
           >
             Try Again
           </button>
+        </div>
+      )}
+      {scanComplete && (
+        <div className="flex flex-col items-center justify-center w-full h-full flex-1">
+          <div className="mb-4 p-4 rounded-2xl bg-green-500/20 border border-green-500/30 text-green-400 text-center">
+            <p>Transaction successful!</p>
+            <button
+              onClick={handleCancel}
+              className="mt-4 px-6 py-2 rounded-full bg-gradient-to-r from-neon-green to-sky-blue text-black font-medium hover:shadow-lg transition-all duration-300"
+            >
+              Return
+            </button>
+          </div>
         </div>
       )}
       {/* Cancel button always visible in bottom center */}

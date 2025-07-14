@@ -16,6 +16,7 @@ const ReceivePage = () => {
   const [success, setSuccess] = useState('');
   const [statusMsg, setStatusMsg] = useState('');
   const [retry, setRetry] = useState(false);
+  const [scanComplete, setScanComplete] = useState(false);
   const navigate = useNavigate();
 
   // Get current user's information from localStorage
@@ -56,7 +57,8 @@ const ReceivePage = () => {
       if (response.data && response.data.transaction) {
         setSuccess('Receive request processed!');
         setStatusMsg(`Transaction ID: ${response.data.transaction.id}`);
-        navigate(-1); // Go back on success
+        setScanComplete(true);
+        setShowHandScan(false);
       } else {
         setError('Receive request failed. Please try again.');
         setRetry(true);
@@ -83,7 +85,12 @@ const ReceivePage = () => {
     setError('');
     setSuccess('');
     setStatusMsg('');
+    setScanComplete(false);
     setShowHandScan(true);
+  };
+
+  const handleReturn = () => {
+    navigate(-1);
   };
 
   if (showHandScan) {
@@ -99,7 +106,7 @@ const ReceivePage = () => {
                 <span>Back to Receive</span>
               </button>
             </div>
-            {!retry && (
+            {!retry && !scanComplete && (
               <HandScan
                 onSuccess={handleHandScanSuccess}
                 onCancel={handleCancel}
@@ -113,6 +120,19 @@ const ReceivePage = () => {
                 >
                   Re-register
                 </button>
+              </div>
+            )}
+            {scanComplete && (
+              <div className="flex flex-col items-center justify-center w-full h-full flex-1">
+                <div className="mb-4 p-4 rounded-2xl bg-green-500/20 border border-green-500/30 text-green-400 text-center">
+                  <p>Receive request processed!</p>
+                  <button
+                    onClick={handleReturn}
+                    className="mt-4 px-6 py-2 rounded-full bg-gradient-to-r from-neon-green to-sky-blue text-black font-medium hover:shadow-lg transition-all duration-300"
+                  >
+                    Return
+                  </button>
+                </div>
               </div>
             )}
           </div>

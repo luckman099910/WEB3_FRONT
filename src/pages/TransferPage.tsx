@@ -20,6 +20,7 @@ const TransferPage = () => {
   const [statusMsg, setStatusMsg] = useState('');
   const [showRegisterPrompt, setShowRegisterPrompt] = useState(false);
   const [retry, setRetry] = useState(false);
+  const [scanComplete, setScanComplete] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -75,7 +76,8 @@ const TransferPage = () => {
       if (response.data.success || response.data.transaction) {
         setSuccess('Transfer completed successfully!');
         setStatusMsg(`Transaction ID: ${response.data.transaction?.id || response.data.transactionId}`);
-        navigate(-1); // Go back on success
+        setScanComplete(true);
+        setShowHandScan(false);
       } else {
         setError('Transfer failed. Please try again.');
         setRetry(true);
@@ -102,7 +104,12 @@ const TransferPage = () => {
     setError('');
     setSuccess('');
     setStatusMsg('');
+    setScanComplete(false);
     setShowHandScan(true);
+  };
+
+  const handleReturn = () => {
+    navigate(-1);
   };
 
   if (showHandScan) {
@@ -119,7 +126,7 @@ const TransferPage = () => {
                 <span>Back to Transfer</span>
               </button>
             </div>
-            {!retry && (
+            {!retry && !scanComplete && (
               <HandScan
                 onSuccess={handleHandScanSuccess}
                 onCancel={handleCancel}
@@ -133,6 +140,19 @@ const TransferPage = () => {
                 >
                   Re-register
                 </button>
+              </div>
+            )}
+            {scanComplete && (
+              <div className="flex flex-col items-center justify-center w-full h-full flex-1">
+                <div className="mb-4 p-4 rounded-2xl bg-green-500/20 border border-green-500/30 text-green-400 text-center">
+                  <p>Transfer completed successfully!</p>
+                  <button
+                    onClick={handleReturn}
+                    className="mt-4 px-6 py-2 rounded-full bg-gradient-to-r from-neon-green to-sky-blue text-black font-medium hover:shadow-lg transition-all duration-300"
+                  >
+                    Return
+                  </button>
+                </div>
               </div>
             )}
           </div>

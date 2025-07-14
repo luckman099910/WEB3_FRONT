@@ -251,14 +251,24 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel, demoMode = fal
             {backendMsg}
           </div>
         )}
-        <button
-          type="button"
-          onClick={onCancel}
-          className="mt-4 px-6 py-2 rounded-full bg-white/10 text-white font-medium hover:bg-white/20 transition-all duration-300"
-          disabled={scanComplete}
-        >
-          Cancel
-        </button>
+        {!scanComplete && (
+          <button
+            type="button"
+            onClick={onCancel}
+            className="mt-4 px-6 py-2 rounded-full bg-white/10 text-white font-medium hover:bg-white/20 transition-all duration-300"
+          >
+            Cancel
+          </button>
+        )}
+        {scanComplete && (
+          <button
+            type="button"
+            onClick={onCancel}
+            className="mt-4 px-6 py-2 rounded-full bg-gradient-to-r from-neon-green to-sky-blue text-black font-medium hover:shadow-lg transition-all duration-300"
+          >
+            Return
+          </button>
+        )}
       </div>
     </div>
   );
