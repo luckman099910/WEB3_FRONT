@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, User } from 'lucide-react';
 import { SignJWT } from 'jose';
 import PalmScanBox from './PalmScanBox';
 import { api } from '../api/palmPayApi';
@@ -182,16 +182,9 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel, demoMode = fal
       const jwt = await new SignJWT({ data: payload })
         .setProtectedHeader({ alg: 'HS256' })
         .sign(new TextEncoder().encode(HAND_SCAN_SECRET));
-      setFeedbackMsg('Scan complete! Sending...');
+      setFeedbackMsg('Scan complete!');
       console.log('[PalmScan] Scan complete. JWT:', jwt);
-      // Example: send to backend (replace with your API call)
-      // You can use onSuccess(jwt) to trigger parent logic
-      const res = await api.post('/api/registerPalm', JSON.stringify({ userId: 'USER_ID', handinfo: jwt }));
-      
-      const data = await res.json();
-      setBackendMsg(data.message || JSON.stringify(data));
-      console.log('[PalmScan] Backend response:', data);
-      onSuccess(jwt); // Optionally call parent
+      onSuccess(jwt);
     } catch (err: any) {
       setError('Scan failed: ' + err.message);
       setScanComplete(false);
