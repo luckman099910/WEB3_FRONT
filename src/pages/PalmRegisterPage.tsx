@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import Layout from '../components/Layout';
 import HandScan from '../components/HandScan';
-import { registerPalmHash } from '../api/palmPayApi';
+// import { registerPalmHash } from '../api/palmPayApi';
+import { api } from '../api/palmPayApi';
 
 const PalmRegisterPage: React.FC = () => {
   const [status, setStatus] = useState<'idle' | 'success' | 'error' | 'loading'>('idle');
@@ -15,7 +16,7 @@ const PalmRegisterPage: React.FC = () => {
     try {
       const user = JSON.parse(localStorage.getItem('user') || '{}');
       if (!user.id) throw new Error('User not found. Please log in.');
-      const res = await registerPalmHash(user.id, jwt);
+      const res = await api.post('/api/registerPalm', { userId: user.id, handinfo: jwt });
       setStatus('success');
       setSuccessMsg('Palm registered successfully!');
     } catch (err: any) {
