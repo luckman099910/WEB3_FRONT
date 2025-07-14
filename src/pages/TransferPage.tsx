@@ -19,6 +19,7 @@ const TransferPage = () => {
   const [success, setSuccess] = useState('');
   const [statusMsg, setStatusMsg] = useState('');
   const [showRegisterPrompt, setShowRegisterPrompt] = useState(false);
+  const [retry, setRetry] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -80,15 +81,15 @@ const TransferPage = () => {
       if (response.data.success || response.data.transaction) {
         setSuccess('Transfer completed successfully!');
         setStatusMsg(`Transaction ID: ${response.data.transaction?.id || response.data.transactionId}`);
-        setTimeout(() => {
-          navigate('/user-dashboard');
-        }, 3000);
+        navigate(-1); // Go back on success
       } else {
         setError('Transfer failed. Please try again.');
+        setRetry(true);
       }
     } catch (err: any) {
       console.error('Transfer error:', err);
       setError(err.response?.data?.error || err.message || 'Transfer failed. Please try again.');
+      setRetry(true);
     } finally {
       setLoading(false);
       setShowHandScan(false);
@@ -100,6 +101,14 @@ const TransferPage = () => {
     setError('');
     setSuccess('');
     setStatusMsg('');
+  };
+
+  const handleRetry = () => {
+    setRetry(false);
+    setError('');
+    setSuccess('');
+    setStatusMsg('');
+    setShowHandScan(true);
   };
 
   if (showHandScan) {
@@ -116,10 +125,22 @@ const TransferPage = () => {
                 <span>Back to Transfer</span>
               </button>
             </div>
-            <HandScan
-              onSuccess={handleHandScanSuccess}
-              onCancel={handleCancel}
-            />
+            {!retry && (
+              <HandScan
+                onSuccess={handleHandScanSuccess}
+                onCancel={handleCancel}
+              />
+            )}
+            {retry && (
+              <div className="flex flex-col items-center justify-center w-full h-full flex-1">
+                <button
+                  onClick={handleRetry}
+                  className="px-6 py-3 rounded-full bg-gradient-to-r from-neon-green to-sky-blue text-black font-medium hover:shadow-lg hover:shadow-neon-green/25 transition-all duration-300 mt-8"
+                >
+                  Re-register
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </Layout>

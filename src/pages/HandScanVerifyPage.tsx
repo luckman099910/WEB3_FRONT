@@ -13,6 +13,7 @@ const HandScanVerifyPage = () => {
   const [statusMsg, setStatusMsg] = useState('');
   const [loading, setLoading] = useState(false);
   const [retry, setRetry] = useState(false);
+  const [showHandScan, setShowHandScan] = useState(true);
 
   const handleScanSuccess = async (handData: string) => {
     setLoading(true);
@@ -41,18 +42,19 @@ const HandScanVerifyPage = () => {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         }
       );
-      const tx = res.data?.transaction;
-      setSuccess('Transaction successful!');
-      setStatusMsg(`${tx?.amount} INR was successfully transmitted from ${tx?.from_user_email} to ${tx?.to_user_email}.`);
+      // On success, go back
+      navigate(-1);
     } catch (err: any) {
       if (err.response?.data?.error?.includes('Sender not found')) {
         setError('User not found. Please try again.');
         setRetry(true);
       } else {
         setError(err.response?.data?.error || 'Transaction failed. Please try again later.');
+        setRetry(true);
       }
     } finally {
       setLoading(false);
+      setShowHandScan(false);
     }
   };
 
@@ -60,36 +62,34 @@ const HandScanVerifyPage = () => {
     navigate(-1);
   };
 
+  const handleRetry = () => {
+    setRetry(false);
+    setError('');
+    setSuccess('');
+    setStatusMsg('');
+    setShowHandScan(true);
+  };
+
   return (
     <div className="min-h-screen w-full bg-[#10131c] flex flex-col justify-center items-center relative">
-      {/* Status/Error/Success overlays */}
+      {/* Status/Error overlays */}
       <div className="absolute top-0 left-0 w-full z-20 flex flex-col items-center mt-6">
         {error && (
           <div className="mb-4 p-4 rounded-2xl bg-red-500/20 border border-red-500/30 text-red-400 text-center max-w-lg w-full">
             {error}
           </div>
         )}
-        {success && (
-          <div className="mb-4 p-4 rounded-2xl bg-green-500/20 border border-green-500/30 text-green-400 text-center max-w-lg w-full">
-            {success}
-          </div>
-        )}
-        {statusMsg && (
-          <div className="mb-4 p-4 rounded-2xl bg-blue-500/20 border border-blue-500/30 text-blue-400 text-center max-w-lg w-full">
-            {statusMsg}
-          </div>
-        )}
       </div>
       {/* Full-page scan UI */}
-      {!success && !retry && (
+      {showHandScan && !retry && (
         <div className="flex flex-col items-center justify-center w-full h-full flex-1">
           <HandScan onCancel={handleCancel} onSuccess={handleScanSuccess} demoMode={true} />
         </div>
       )}
-      {retry && !success && (
+      {retry && (
         <div className="flex flex-col items-center justify-center w-full h-full flex-1">
           <button
-            onClick={() => setRetry(false)}
+            onClick={handleRetry}
             className="px-6 py-3 rounded-full bg-gradient-to-r from-neon-green to-sky-blue text-black font-medium hover:shadow-lg hover:shadow-neon-green/25 transition-all duration-300 mt-8"
           >
             Try Again
