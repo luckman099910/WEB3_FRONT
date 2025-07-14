@@ -2,8 +2,10 @@ import React, { useRef, useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import { SignJWT } from 'jose';
 import PalmScanBox from './PalmScanBox';
-import * as HandsModule from '@mediapipe/hands';
-const Hands = HandsModule.Hands;
+import HandsModule from '@mediapipe/hands';
+// Fix for MediaPipe Hands import in Vite/ESM (handles both ESM and CJS)
+// @ts-ignore
+const Hands = HandsModule.Hands || (HandsModule as any).default?.Hands;
 import { Camera } from '@mediapipe/camera_utils';
 
 interface HandScanProps {
@@ -38,18 +40,18 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel, demoMode = fal
       return;
     }
     setLoading(true);
-    let hands: any = null;
     let camera: Camera | null = null;
     let stopped = false;
 
     async function setup() {
       console.log('[PalmScan] HandsModule:', HandsModule);
+      console.log('[PalmScan] Hands:', Hands);
       if (!Hands) {
         console.error('[PalmScan] Hands constructor not found in HandsModule!');
         setError('Palm detection module failed to load.');
         return;
       }
-      hands = new Hands({
+      const hands = new Hands({
         locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
       });
       hands.setOptions({
@@ -89,7 +91,6 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel, demoMode = fal
     return () => {
       stopped = true;
       if (camera) camera.stop();
-      if (hands) hands.close();
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
         streamRef.current = null;
