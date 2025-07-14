@@ -201,10 +201,51 @@ const AdminPage = () => {
           ))}
         </div>
         {/* Tab Content */}
+        
         <div className="bg-card-bg rounded-xl shadow-xl p-6 min-h-[400px] w-full">
           {tabIndex === 0 && (
             <div>
-              <h2 className="text-xl font-bold mb-4">All Users</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold">All Users</h2>
+                <button
+                  className="px-4 py-2 rounded-lg bg-electric-blue text-white font-semibold shadow hover:bg-blue-600 transition-colors"
+                  onClick={() => {
+                    // CSV generation logic
+                    if (!users || users.length === 0) return;
+                    const headers = [
+                      'Name',
+                      'Email',
+                      'Balance',
+                      'Role',
+                      'Palm Registered',
+                      'Created'
+                    ];
+                    const rows = users.map((u: any) => [
+                      u.username,
+                      u.email,
+                      u.balance,
+                      u.role,
+                      u.palm_hash ? 'YES' : 'NO',
+                      u.created_at?.slice(0, 10)
+                    ]);
+                    const csvContent = [
+                      headers.join(','),
+                      ...rows.map(r => r.map(field => `"${String(field ?? '').replace(/"/g, '""')}"`).join(','))
+                    ].join('\n');
+                    const blob = new Blob([csvContent], { type: 'text/csv' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'users.csv';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                  }}
+                >
+                  Download CSV
+                </button>
+              </div>
               {usersLoading ? (
                 <div className="text-text-secondary">Loading users...</div>
               ) : usersError ? (

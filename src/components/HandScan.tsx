@@ -18,6 +18,35 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel, demoMode = fal
   const [handInBox, setHandInBox] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState('Place your palm in the box and hold steady');
   const [scanning, setScanning] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  // Camera setup (only if not demoMode)
+  useEffect(() => {
+    if (demoMode) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
+      .then((stream) => {
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+        setLoading(false);
+      })
+      .catch((err) => {
+        setError('Could not access camera: ' + err.message);
+        setLoading(false);
+      });
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+      }
+    };
+  }, [demoMode]);
 
   // Demo mode: always show palm outline and scanning bar
   useEffect(() => {
@@ -49,6 +78,19 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel, demoMode = fal
 
   return (
     <div className="flex flex-col items-center justify-center w-full max-w-2xl mx-auto">
+      {/* Video Feed (only if not demoMode) */}
+      {!demoMode && (
+        <div className="relative w-full flex justify-center items-center" style={{ minHeight: 400 }}>
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            className="absolute top-0 left-0 w-full h-full object-cover rounded-2xl z-0"
+            style={{ background: '#10131c', maxHeight: 400 }}
+          />
+        </div>
+      )}
       {/* Feedback and scan box */}
       <PalmScanBox
         isAligned={handInBox}

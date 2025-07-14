@@ -48,14 +48,8 @@ const TechnologyPage = () => {
   const techStack = [
     { title: 'Frontend', tech: 'React / TypeScript' },
     { title: 'Backend', tech: 'Node.js / PHP' },
-    { title: 'Blockchain', tech: 'Polygon Mainnet' },
+    { title: 'Blockchain', tech: 'Celo Mainnet' },
     { title: 'Biometrics', tech: 'Palm + Face Fusion (Coming)' }
-  ];
-
-  const smartContracts = [
-    'BiometricConsent.sol',
-    'TransactionMint.sol',
-    'ConsentRegistry.sol'
   ];
 
   const patentClaims = [
@@ -282,39 +276,6 @@ const TechnologyPage = () => {
               >
                 <h3 className="text-lg font-light text-primary mb-2">{item.title}</h3>
                 <p className="text-neon-green font-light text-glow">{item.tech}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Smart Contracts */}
-      <section className="py-20 bg-black/20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="text-center mb-16"
-          >
-            <h2 className="text-3xl md:text-4xl font-light text-primary mb-4">
-              Smart Contract Stack
-            </h2>
-          </motion.div>
-          
-          <div className="grid md:grid-cols-3 gap-8">
-            {smartContracts.map((contract, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.2 }}
-                className="p-6 rounded-3xl glass-card hover:border-neon-green/30 transition-all duration-300 text-center group"
-              >
-                <div className="p-3 rounded-2xl bg-gradient-to-br from-neon-green/20 to-neon-aqua/20 w-fit mx-auto mb-4 group-hover:scale-110 transition-transform">
-                  <Database className="w-6 h-6 text-neon-green" />
-                </div>
-                <p className="text-primary font-light font-mono">{contract}</p>
               </motion.div>
             ))}
           </div>
