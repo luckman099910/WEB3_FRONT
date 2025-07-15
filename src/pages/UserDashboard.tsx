@@ -36,6 +36,7 @@ const UserDashboard = () => {
     // Persist notification state in localStorage
     return localStorage.getItem('notificationsActive') === 'true';
   });
+  const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
 
   // Mock user ID for demo - in real app this would come from auth
   const userId = 'demo-user-id';
@@ -115,6 +116,9 @@ const UserDashboard = () => {
     { id: 'consent', label: 'Consent', icon: Scan },
     { id: 'rewards', label: 'Rewards', icon: Gift }
   ];
+
+  // Helper to get transaction field from item.tx or fallback
+  const getTxField = (item: any, field: string): any => (item.tx && typeof item.tx === 'object' && field in item.tx) ? item.tx[field] : item[field];
 
 
   if (loading) {
@@ -235,7 +239,32 @@ const UserDashboard = () => {
                           <p className="text-white font-ultralight">
                             {item.type === 'palm_registration' && 'Palm Registered'}
                             {item.type === 'palm_manual_scan' && `Manual Palm Scan (${item.status})`}
-                            {item.type !== 'palm_registration' && item.type !== 'palm_manual_scan' && `Transaction #${item.txid?.slice(0, 8)}`}
+                            {item.type !== 'palm_registration' && item.type !== 'palm_manual_scan' && (
+                              <span className="flex items-center gap-2 flex-wrap">
+                                {`Transaction #${String(getTxField(item, 'txid') || item.txid).slice(0, 8)}`}
+                                {item.tx && (
+                                  <span className="relative ml-2">
+                                    <button
+                                      className="text-xs text-cyan-400 font-mono bg-white/10 px-2 py-1 rounded hover:bg-cyan-900/30 transition-all duration-200 max-w-[160px] truncate"
+                                      style={{ cursor: 'pointer' }}
+                                      title={item.tx}
+                                      onClick={() => {
+                                        navigator.clipboard.writeText(item.tx);
+                                        setCopiedIdx(idx);
+                                        setTimeout(() => setCopiedIdx(null), 1200);
+                                      }}
+                                    >
+                                      {item.tx.slice(0, 10)}...{item.tx.slice(-6)}
+                                    </button>
+                                    {copiedIdx === idx && (
+                                      <span className="absolute left-1/2 -translate-x-1/2 -top-7 bg-black text-white text-xs rounded px-2 py-1 z-10">
+                                        Copied!
+                                      </span>
+                                    )}
+                                  </span>
+                                )}
+                              </span>
+                            )}
                           </p>
                           <p className="text-white/50 font-ultralight text-sm">{item.time ? new Date(item.time).toLocaleString() : item.created_at ? new Date(item.created_at).toLocaleString() : ''}</p>
                           {item.similarity !== undefined && (
@@ -249,8 +278,8 @@ const UserDashboard = () => {
                           )}
                           {item.type !== 'palm_registration' && item.type !== 'palm_manual_scan' && (
                             <>
-                              <p className={`font-ultralight ${item.amount > 0 ? 'text-fintech-green' : 'text-white'}`}>{item.amount > 0 ? '+' : ''}₹{Math.abs(item.amount).toLocaleString()}</p>
-                              <p className="text-fintech-green font-ultralight text-xs">Completed</p>
+                              <p className={`font-ultralight ${getTxField(item, 'amount') > 0 ? 'text-fintech-green' : 'text-white'}`}>{getTxField(item, 'amount') > 0 ? '+' : ''}₹{Math.abs(getTxField(item, 'amount')).toLocaleString()}</p>
+                              <p className="text-fintech-green font-ultralight text-xs">{getTxField(item, 'status') || 'Completed'}</p>
                             </>
                           )}
                         </div>
@@ -293,7 +322,32 @@ const UserDashboard = () => {
                       <p className="text-white font-ultralight">
                         {item.type === 'palm_registration' && 'Palm Registered'}
                         {item.type === 'palm_manual_scan' && `Manual Palm Scan (${item.status})`}
-                        {item.type !== 'palm_registration' && item.type !== 'palm_manual_scan' && `Transaction #${item.txid?.slice(0, 8)}`}
+                        {item.type !== 'palm_registration' && item.type !== 'palm_manual_scan' && (
+                          <span className="flex items-center gap-2 flex-wrap">
+                            {`Transaction #${String(getTxField(item, 'txid') || item.txid).slice(0, 8)}`}
+                            {item.tx && (
+                              <span className="relative ml-2">
+                                <button
+                                  className="text-xs text-cyan-400 font-mono bg-white/10 px-2 py-1 rounded hover:bg-cyan-900/30 transition-all duration-200 max-w-[160px] truncate"
+                                  style={{ cursor: 'pointer' }}
+                                  title={item.tx}
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(item.tx);
+                                    setCopiedIdx(idx);
+                                    setTimeout(() => setCopiedIdx(null), 1200);
+                                  }}
+                                >
+                                  {item.tx.slice(0, 10)}...{item.tx.slice(-6)}
+                                </button>
+                                {copiedIdx === idx && (
+                                  <span className="absolute left-1/2 -translate-x-1/2 -top-7 bg-black text-white text-xs rounded px-2 py-1 z-10">
+                                    Copied!
+                                  </span>
+                                )}
+                              </span>
+                            )}
+                          </span>
+                        )}
                       </p>
                       <p className="text-white/50 font-ultralight text-sm">{item.time ? new Date(item.time).toLocaleString() : item.created_at ? new Date(item.created_at).toLocaleString() : ''}</p>
                       {item.similarity !== undefined && (
@@ -307,8 +361,8 @@ const UserDashboard = () => {
                       )}
                       {item.type !== 'palm_registration' && item.type !== 'palm_manual_scan' && (
                         <>
-                          <p className={`font-ultralight ${item.amount > 0 ? 'text-fintech-green' : 'text-white'}`}>{item.amount > 0 ? '+' : ''}₹{Math.abs(item.amount).toLocaleString()}</p>
-                          <p className="text-fintech-green font-ultralight text-xs">Completed</p>
+                          <p className={`font-ultralight ${getTxField(item, 'amount') > 0 ? 'text-fintech-green' : 'text-white'}`}>{getTxField(item, 'amount') > 0 ? '+' : ''}₹{Math.abs(getTxField(item, 'amount')).toLocaleString()}</p>
+                          <p className="text-fintech-green font-ultralight text-xs">{getTxField(item, 'status') || 'Completed'}</p>
                         </>
                       )}
                     </div>
@@ -320,7 +374,7 @@ const UserDashboard = () => {
         );
 
       case 'consent':
-        const handinfo = userData?.user?.handinfo;
+        const handinfo = userData?.user?.palm_hash;
         const hasPalm = !!handinfo && handinfo !== 'null' && handinfo !== 'undefined';
         return (
           <div className="space-y-6">
