@@ -280,14 +280,15 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel, demoMode = fal
         demoMode={demoMode}
         scanning={handInBox && !scanComplete}
         videoElement={
-          showCamera && !demoMode ? (
+          // Always render the video element, but hide it in points-only mode
+          !demoMode ? (
             <video
               ref={videoRef}
               autoPlay
               playsInline
               muted
               className="w-full h-full object-cover rounded-2xl"
-              style={{ background: '#10131c', maxHeight: 400 }}
+              style={{ background: '#10131c', maxHeight: 400, display: showCamera ? undefined : 'none' }}
             />
           ) : null
         }
