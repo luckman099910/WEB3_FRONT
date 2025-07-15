@@ -23,6 +23,8 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel, demoMode = fal
   const [timer, setTimer] = useState(0);
   const [scanComplete, setScanComplete] = useState(false);
   const [backendMsg, setBackendMsg] = useState('');
+  const [requestStatus, setRequestStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [showRetry, setShowRetry] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -163,42 +165,62 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel, demoMode = fal
     };
   }, [handInBox, scanComplete, demoMode]);
 
-  // When timer reaches 0 and hand is still in box, capture and send
+  // When timer reaches 0 and hand is still in box, enable scan button
   useEffect(() => {
     if (scanComplete || demoMode) return;
     if (timer === 0 && handInBox && lastLandmarks.current && !sentRef.current) {
-      doScan(lastLandmarks.current);
+      setScanning(true);
+    } else {
+      setScanning(false);
     }
   }, [timer, handInBox, scanComplete, demoMode]);
 
-  async function doScan(landmarks: any) {
+  // New: Only send request when user clicks scan button (auto-click for now, but can be changed to manual if needed)
+  useEffect(() => {
+    if (scanning && !sentRef.current && !scanComplete) {
+      handleScan();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scanning]);
+
+  const handleScan = async () => {
     setScanComplete(true);
-    setScanning(false);
+    setRequestStatus('loading');
     setFeedbackMsg('Scanning...');
     sentRef.current = true;
+    setShowRetry(false);
     try {
       // Sign landmarks as JWT
-      const payload = JSON.stringify(landmarks);
+      const payload = JSON.stringify(lastLandmarks.current);
       const jwt = await new SignJWT({ data: payload })
         .setProtectedHeader({ alg: 'HS256' })
         .sign(new TextEncoder().encode(HAND_SCAN_SECRET));
       setFeedbackMsg('Scan complete! Sending...');
-      console.log('[PalmScan] Scan complete. JWT:', jwt);
-      // Example: send to backend (replace with your API call)
-      // You can use onSuccess(jwt) to trigger parent logic
-      const res = await api.post('/api/registerPalm', JSON.stringify({ userId: User.id, handinfo: jwt }));
-      
-      const data = await res.json();
-      setBackendMsg(data.message || JSON.stringify(data));
-      console.log('[PalmScan] Backend response:', data);
-      onSuccess(jwt); // Optionally call parent
+      // Call parent onSuccess (parent will send request)
+      await onSuccess(jwt);
+      setRequestStatus('success');
+      setBackendMsg('Scan successful!');
     } catch (err: any) {
-      setError('Scan failed: ' + err.message);
+      setRequestStatus('error');
+      setError('Scan failed. Please try again.');
+      setShowRetry(true);
       setScanComplete(false);
       sentRef.current = false;
+      setFeedbackMsg('Place your palm in the box and hold steady');
       console.error('[PalmScan] Error:', err);
     }
-  }
+  };
+
+  const handleRetry = () => {
+    setError('');
+    setBackendMsg('');
+    setRequestStatus('idle');
+    setScanComplete(false);
+    setShowRetry(false);
+    sentRef.current = false;
+    setTimer(0);
+    setFeedbackMsg('Place your palm in the box and hold steady');
+  };
 
   // Hand alignment check (basic: hand center in box, hand size reasonable)
   function isHandAligned(lm: any[]): boolean {
@@ -253,16 +275,30 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel, demoMode = fal
             {error}
           </div>
         )}
-        {backendMsg && (
+        {backendMsg && requestStatus === 'success' && (
           <div className="mt-2 p-2 rounded-xl bg-green-500/20 border border-green-500/30 text-green-400 flex items-center gap-2">
             {backendMsg}
           </div>
+        )}
+        {requestStatus === 'loading' && (
+          <div className="mt-2 p-2 rounded-xl bg-blue-500/20 border border-blue-500/30 text-blue-400 flex items-center gap-2">
+            Processing scan...
+          </div>
+        )}
+        {showRetry && requestStatus === 'error' && (
+          <button
+            type="button"
+            onClick={handleRetry}
+            className="mt-4 px-6 py-2 rounded-full bg-gradient-to-r from-neon-green to-sky-blue text-black font-medium hover:shadow-lg transition-all duration-300"
+          >
+            Retry
+          </button>
         )}
         <button
           type="button"
           onClick={onCancel}
           className="mt-4 px-6 py-2 rounded-full bg-white/10 text-white font-medium hover:bg-white/20 transition-all duration-300"
-          disabled={scanComplete}
+          disabled={scanComplete && requestStatus === 'loading'}
         >
           Cancel
         </button>
