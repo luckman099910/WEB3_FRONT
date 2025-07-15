@@ -20,7 +20,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 // import { getMerchantPayments } from '../api/palmPayApi';
-// import TransactionProcessor from '../components/TransactionProcessor';
+import TransactionProcessor from '../components/TransactionProcessor';
 
 const StoreDashboard = () => {
   const [activeTab, setActiveTab] = useState('payments');

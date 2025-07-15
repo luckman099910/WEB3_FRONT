@@ -116,15 +116,6 @@ const TransferPage = () => {
       <Layout>
         <div className="flex justify-center items-center min-h-[70vh]" style={{height:"100vh"}}>
           <div className="w-full max-w-md">
-            <div className="mb-6 text-center">
-              <button
-                onClick={handleCancel}
-                className="flex items-center space-x-2 text-white/70 hover:text-white transition-colors"
-              >
-                <ArrowLeft className="w-5 h-5" />
-                <span>Back to Transfer</span>
-              </button>
-            </div>
             {!retry && (
               <HandScan
                 onSuccess={handleHandScanSuccess}
