@@ -53,7 +53,7 @@ const PalmScanBox: React.FC<PalmScanBoxProps> = ({ isAligned, feedbackMsg, demoM
           </div>
         )}
         {/* Points-only mode: render hand landmarks as SVG dots */}
-        {showPointsOnly && landmarks && (
+        {landmarks && landmarks.length > 0 && (
           <svg className="absolute inset-0 z-40" width="100%" height="100%" viewBox="0 0 1 1" style={{ width: '100%', height: '100%' }}>
             {landmarks.map((p, i) => (
               <circle key={i} cx={p.x} cy={p.y} r={0.015} fill="#2d8cff" stroke="#fff" strokeWidth={0.005} />
