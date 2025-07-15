@@ -280,7 +280,7 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel, demoMode = fal
         demoMode={demoMode}
         scanning={handInBox && !scanComplete}
         videoElement={
-          // Always render the video element for MediaPipe to work
+          // Always render video element (like HTML file)
           !demoMode ? (
             <video
               ref={videoRef}
@@ -290,17 +290,16 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel, demoMode = fal
               className="w-full h-full object-cover rounded-2xl"
               style={{ 
                 background: '#10131c', 
-                maxHeight: 400, 
-                visibility: showCamera ? 'visible' : 'hidden',
-                position: showCamera ? 'relative' : 'absolute',
-                top: showCamera ? 'auto' : '-9999px'
+                maxHeight: 400,
+                opacity: showCamera ? 1 : 0,
+                transition: 'opacity 0.3s ease'
               }}
             />
           ) : null
         }
-        // Pass hand points for points-only mode
-        showPointsOnly={!showCamera}
+        // Always pass landmarks (like HTML file)
         landmarks={lastLandmarks.current ? getNormalizedLandmarks(lastLandmarks.current) : undefined}
+        showPointsOnly={!showCamera}
       />
       {/* Progress Bar and Controls */}
       <div className="w-full mt-4 flex flex-col items-center">

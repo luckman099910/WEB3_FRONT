@@ -46,15 +46,26 @@ const PalmScanBox: React.FC<PalmScanBoxProps> = ({ isAligned, feedbackMsg, demoM
       <div className={`mb-2 text-lg font-medium ${isAligned ? 'text-green-400' : 'text-red-400'}`}>{feedbackMsg}</div>
       {/* Scanning Area (scan box) */}
       <div className="relative w-full aspect-[3/4] max-w-xs flex items-center justify-center" style={{height: 400}}>
-        {/* Video feed inside scan box, behind everything */}
-        {videoElement && !showPointsOnly && (
+        {/* Video feed - always present (like HTML file) */}
+        {videoElement && (
           <div className="absolute inset-0 z-0 rounded-2xl overflow-hidden">
             {videoElement}
           </div>
         )}
-        {/* Points-only mode: render hand landmarks as SVG dots */}
+        {/* Hand landmarks as SVG dots - always rendered when available (like HTML file) */}
         {landmarks && landmarks.length > 0 && (
-          <svg className="absolute inset-0 z-40" width="100%" height="100%" viewBox="0 0 1 1" style={{ width: '100%', height: '100%' }}>
+          <svg 
+            className="absolute inset-0 z-40" 
+            width="100%" 
+            height="100%" 
+            viewBox="0 0 1 1" 
+            style={{ 
+              width: '100%', 
+              height: '100%',
+              opacity: showPointsOnly ? 1 : 0,
+              transition: 'opacity 0.3s ease'
+            }}
+          >
             {landmarks.map((p, i) => (
               <circle key={i} cx={p.x} cy={p.y} r={0.015} fill="#2d8cff" stroke="#fff" strokeWidth={0.005} />
             ))}
