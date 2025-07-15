@@ -222,6 +222,7 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel, demoMode = fal
     sentRef.current = false;
     setTimer(0);
     setFeedbackMsg('Place your palm in the box and hold steady');
+    // Ensure the scan UI remains visible and resets for a new attempt
   };
 
   // Hand alignment check (basic: hand center in box, hand size reasonable)
@@ -247,8 +248,32 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel, demoMode = fal
     return aligned;
   }
 
+  // Helper: normalize landmarks to [0,1] for SVG overlay
+  function getNormalizedLandmarks(lm: any[]): Array<{ x: number; y: number }> {
+    if (!lm || lm.length === 0) return [];
+    // Find bounding box
+    const xs = lm.map((p) => p.x);
+    const ys = lm.map((p) => p.y);
+    const minX = Math.min(...xs), maxX = Math.max(...xs);
+    const minY = Math.min(...ys), maxY = Math.max(...ys);
+    // Normalize to [0,1] in scan box
+    return lm.map((p) => ({
+      x: (p.x - minX) / (maxX - minX || 1),
+      y: (p.y - minY) / (maxY - minY || 1),
+    }));
+  }
+
   return (
     <div className="flex flex-col items-center justify-center w-full max-w-2xl mx-auto">
+      {/* Return Button at the top */}
+      <button
+        type="button"
+        onClick={onCancel}
+        className="self-start mb-4 flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 text-white font-medium hover:bg-white/20 transition-all duration-300"
+        style={{ position: 'absolute', top: 24, left: 24, zIndex: 50 }}
+      >
+        <span style={{ fontSize: 20, display: 'inline-block', transform: 'translateY(1px)' }}>&larr;</span> <span>Return</span>
+      </button>
       {/* Toggle Button */}
       <button
         type="button"
@@ -275,6 +300,9 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel, demoMode = fal
             />
           ) : null
         }
+        // Pass hand points for points-only mode
+        showPointsOnly={!showCamera}
+        landmarks={!showCamera && lastLandmarks.current ? getNormalizedLandmarks(lastLandmarks.current) : undefined}
       />
       {/* Progress Bar and Controls */}
       <div className="w-full mt-4 flex flex-col items-center">
@@ -302,17 +330,10 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel, demoMode = fal
             onClick={handleRetry}
             className="mt-4 px-6 py-2 rounded-full bg-gradient-to-r from-neon-green to-sky-blue text-black font-medium hover:shadow-lg transition-all duration-300"
           >
-            Retry
+            Re-register
           </button>
         )}
-        <button
-          type="button"
-          onClick={onCancel}
-          className="mt-4 px-6 py-2 rounded-full bg-white/10 text-white font-medium hover:bg-white/20 transition-all duration-300"
-          disabled={scanComplete && requestStatus === 'loading'}
-        >
-          Cancel
-        </button>
+        {/* Cancel button removed */}
       </div>
     </div>
   );

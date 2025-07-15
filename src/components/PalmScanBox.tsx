@@ -8,9 +8,11 @@ interface PalmScanBoxProps {
   scanning?: boolean;
   videoElement?: React.ReactNode; // New prop for video
   showPalmImage?: boolean; // NEW: control palm image rendering
+  landmarks?: Array<{ x: number; y: number }>; // NEW: hand landmarks for points-only mode
+  showPointsOnly?: boolean; // NEW: toggle for points-only mode
 }
 
-const PalmScanBox: React.FC<PalmScanBoxProps> = ({ isAligned, feedbackMsg, demoMode = false, scanning = false, videoElement, showPalmImage = true }) => {
+const PalmScanBox: React.FC<PalmScanBoxProps> = ({ isAligned, feedbackMsg, demoMode = false, scanning = false, videoElement, showPalmImage = true, landmarks, showPointsOnly }) => {
   const scanBarRef = useRef<HTMLDivElement>(null);
   // Animate scan bar (only if scanning and not registration)
   useEffect(() => {
@@ -45,10 +47,18 @@ const PalmScanBox: React.FC<PalmScanBoxProps> = ({ isAligned, feedbackMsg, demoM
       {/* Scanning Area (scan box) */}
       <div className="relative w-full aspect-[3/4] max-w-xs flex items-center justify-center" style={{height: 400}}>
         {/* Video feed inside scan box, behind everything */}
-        {videoElement && (
+        {videoElement && !showPointsOnly && (
           <div className="absolute inset-0 z-0 rounded-2xl overflow-hidden">
             {videoElement}
           </div>
+        )}
+        {/* Points-only mode: render hand landmarks as SVG dots */}
+        {showPointsOnly && landmarks && (
+          <svg className="absolute inset-0 z-40" width="100%" height="100%" viewBox="0 0 1 1" style={{ width: '100%', height: '100%' }}>
+            {landmarks.map((p, i) => (
+              <circle key={i} cx={p.x} cy={p.y} r={0.015} fill="#2d8cff" stroke="#fff" strokeWidth={0.005} />
+            ))}
+          </svg>
         )}
         {/* Blur effect outside palm SVG but inside scan box */}
         <div className="absolute inset-0 z-20 pointer-events-none" style={{
@@ -71,7 +81,7 @@ const PalmScanBox: React.FC<PalmScanBoxProps> = ({ isAligned, feedbackMsg, demoM
           }}
         >
           {/* Palm Outline SVG (fill 98% of scan box) */}
-          {showPalmImage && (
+          {showPalmImage && !showPointsOnly && (
             <img
               src={handPng}
               alt="Palm Outline"
