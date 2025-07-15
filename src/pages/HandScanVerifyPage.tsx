@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import HandScan from '../components/HandScan';
-import axios from 'axios';
+import { api } from '../api/palmPayApi';
 
 const HandScanVerifyPage = () => {
   const location = useLocation();
@@ -31,8 +31,8 @@ const HandScanVerifyPage = () => {
           token = parsed.token || '';
         }
       }
-      const res = await axios.post(
-        '/api/transfer',
+      const res = await api.post(
+        '/transfer',
         {
           receiverEmail,
           amount,
@@ -42,6 +42,7 @@ const HandScanVerifyPage = () => {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         }
       );
+      
       // On success, go back
       navigate(-1);
     } catch (err: any) {

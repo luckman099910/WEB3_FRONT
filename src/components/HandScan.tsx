@@ -169,6 +169,7 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel, demoMode = fal
   // When timer reaches 0 and hand is still in box, enable scan button
   useEffect(() => {
     if (scanComplete || demoMode) return;
+    // Only allow scan if timer is exactly 0, hand is in box, and scan not sent
     if (timer === 0 && handInBox && lastLandmarks.current && !sentRef.current) {
       setScanning(true);
     } else {
@@ -176,13 +177,13 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel, demoMode = fal
     }
   }, [timer, handInBox, scanComplete, demoMode]);
 
-  // New: Only send request when user clicks scan button (auto-click for now, but can be changed to manual if needed)
+  // Only send request when timer is 0 and scanning is true (prevents early requests)
   useEffect(() => {
-    if (scanning && !sentRef.current && !scanComplete) {
+    if (scanning && !sentRef.current && !scanComplete && timer === 0) {
       handleScan();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scanning]);
+  }, [scanning, timer]);
 
   const handleScan = async () => {
     setScanComplete(true);
@@ -230,17 +231,17 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel, demoMode = fal
     const ys = lm.map((p) => p.y);
     const minX = Math.min(...xs), maxX = Math.max(...xs);
     const minY = Math.min(...ys), maxY = Math.max(...ys);
-    // Center and size thresholds (tweak as needed)
+    // Center and size thresholds (expanded for easier alignment)
     const centerX = (minX + maxX) / 2;
     const centerY = (minY + maxY) / 2;
     const width = maxX - minX;
     const height = maxY - minY;
-    // Center should be near 0.5,0.5; size should be reasonable
+    // Expanded: allow more leeway for center and size
     const aligned = (
-      centerX > 0.4 && centerX < 0.6 &&
-      centerY > 0.4 && centerY < 0.6 &&
-      width > 0.3 && width < 0.7 &&
-      height > 0.3 && height < 0.7
+      centerX > 0.30 && centerX < 0.70 &&
+      centerY > 0.30 && centerY < 0.70 &&
+      width > 0.20 && width < 0.80 &&
+      height > 0.20 && height < 0.80
     );
     if (aligned) console.log('[PalmScan] Hand is aligned.');
     return aligned;
