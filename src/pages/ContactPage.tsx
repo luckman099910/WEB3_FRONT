@@ -16,6 +16,7 @@ import {
   Lightbulb,
   CheckCircle
 } from 'lucide-react';
+import { api } from '../api/palmPayApi';
 
 const ContactPage = () => {
   const [formData, setFormData] = useState({
@@ -37,14 +38,60 @@ const ContactPage = () => {
     message: ''
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [inquirySent, setInquirySent] = useState(false);
+  const [vendorSent, setVendorSent] = useState(false);
+  const [inquiryError, setInquiryError] = useState('');
+  const [vendorError, setVendorError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Form submitted:', formData);
+    setInquiryError('');
+    setInquirySent(false);
+    try {
+      const res = await api.post('/api/inquiry', {
+        name: formData.name,
+        email_or_phone: formData.email,
+        role: formData.role,
+        message: formData.message
+      });
+      if (res.status === 201) {
+        setInquirySent(true);
+        setFormData({ name: '', email: '', role: '', message: '' });
+      } else {
+        setInquiryError(res.data?.error || 'Failed to send request.');
+      }
+    } catch (err: any) {
+      setInquiryError(err.response?.data?.error || 'Failed to send request.');
+    }
   };
 
-  const handleVendorSubmit = (e: React.FormEvent) => {
+  const handleVendorSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Vendor form submitted:', vendorData);
+    setVendorError('');
+    setVendorSent(false);
+    try {
+      const interests = [];
+      if (vendorData.palmpos) interests.push('PalmPOS Integration');
+      if (vendorData.palmkiosk) interests.push('PalmKiosk Setup');
+      if (vendorData.integration) interests.push('API Integration');
+      const res = await api.post('/api/vendor-registration', {
+        business_name: vendorData.businessName,
+        owner_name: vendorData.ownerName,
+        email: vendorData.email,
+        phone: vendorData.phone,
+        address: vendorData.address,
+        interests,
+        comments: vendorData.message
+      });
+      if (res.status === 201) {
+        setVendorSent(true);
+        setVendorData({ businessName: '', ownerName: '', email: '', phone: '', address: '', palmpos: false, palmkiosk: false, integration: false, message: '' });
+      } else {
+        setVendorError(res.data?.error || 'Failed to send request.');
+      }
+    } catch (err: any) {
+      setVendorError(err.response?.data?.error || 'Failed to send request.');
+    }
   };
 
   const contactInfo = [
@@ -274,6 +321,8 @@ const ContactPage = () => {
                   />
                 </div>
                 
+                {inquirySent && <div className="text-green-400 text-center">Request sent!</div>}
+                {inquiryError && <div className="text-red-400 text-center">{inquiryError}</div>}
                 <button
                   type="submit"
                   className="w-full btn-primary px-6 py-3 rounded-full flex items-center justify-center space-x-2 group"
@@ -393,6 +442,8 @@ const ContactPage = () => {
                   />
                 </div>
                 
+                {vendorSent && <div className="text-green-400 text-center">Request sent!</div>}
+                {vendorError && <div className="text-red-400 text-center">{vendorError}</div>}
                 <button
                   type="submit"
                   className="w-full flex items-center justify-center space-x-2 px-6 py-3 rounded-full bg-gradient-to-r from-purple-400 to-pink-400 text-white font-normal hover:neon-glow-aqua transition-all duration-300 group"

@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, Shield, Zap, Globe, Users, CheckCircle, Hand, Fingerprint, Coins, Link as LinkIcon, Smartphone, Star, Quote, MapPin, Search, Building, Award, Sparkles } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import LocateKioskModal from '../components/LocateKioskModal';
+import HostKioskModal from '../components/HostKioskModal';
 
 const HomePage = () => {
   const features = [
@@ -93,6 +95,10 @@ const HomePage = () => {
       action();
     }
   };
+
+  const [showLocate, setShowLocate] = useState(false);
+  const [showHost, setShowHost] = useState(false);
+  const [showComingSoon, setShowComingSoon] = useState<string | null>(null);
 
   return (
     <div className="bg-tech-blue pt-20">
@@ -441,7 +447,10 @@ const HomePage = () => {
               </div>
 
               <div className="grid grid-cols-1 gap-4">
-                <button className="flex items-center justify-center space-x-2 px-6 py-4 rounded-full bg-gradient-to-r from-neon-green to-sky-blue text-tech-blue font-normal hover:neon-glow transition-all duration-300 group">
+                <button
+                  className="flex items-center justify-center space-x-2 px-6 py-4 rounded-full bg-gradient-to-r from-neon-green to-sky-blue text-tech-blue font-normal hover:neon-glow transition-all duration-300 group"
+                  onClick={() => setShowLocate(true)}
+                >
                   <MapPin className="w-5 h-5" />
                   <span>Locate PalmKiosk</span>
                 </button>
@@ -455,7 +464,10 @@ const HomePage = () => {
                     <Search className="w-5 h-5" />
                   </button>
                 </div>
-                <button className="flex items-center justify-center space-x-2 px-6 py-4 rounded-full glass-effect text-white hover:bg-white/10 hover:border-neon-green/50 transition-all duration-300">
+                <button
+                  className="flex items-center justify-center space-x-2 px-6 py-4 rounded-full glass-effect text-white hover:bg-white/10 hover:border-neon-green/50 transition-all duration-300"
+                  onClick={() => setShowHost(true)}
+                >
                   <Building className="w-5 h-5" />
                   <span>Partner with PalmPOS</span>
                 </button>
@@ -487,10 +499,10 @@ const HomePage = () => {
             </div>
             
             <div className="flex flex-wrap justify-center gap-6 mb-8">
-              <button className="text-white/70 hover:text-neon-green hover:text-glow transition-colors font-light">Locate PalmKiosk™</button>
-              <button className="text-white/70 hover:text-neon-green hover:text-glow transition-colors font-light">Partner with PalmPOS™</button>
-              <button className="text-white/70 hover:text-neon-green hover:text-glow transition-colors font-light">PalmStars</button>
-              <button className="text-white/70 hover:text-neon-green hover:text-glow transition-colors font-light">PalmPoints</button>
+              <button className="text-white/70 hover:text-neon-green hover:text-glow transition-colors font-light" onClick={() => setShowLocate(true)}>Locate PalmKiosk™</button>
+              <button className="text-white/70 hover:text-neon-green hover:text-glow transition-colors font-light" onClick={() => setShowHost(true)}>Partner with PalmPOS™</button>
+              <button className="text-white/70 hover:text-neon-green hover:text-glow transition-colors font-light" onClick={() => setShowComingSoon('PalmStars')}>PalmStars</button>
+              <button className="text-white/70 hover:text-neon-green hover:text-glow transition-colors font-light" onClick={() => setShowComingSoon('PalmPoints')}>PalmPoints</button>
             </div>
             <div className="flex flex-wrap justify-center gap-6 mb-8">
               <Link to="/" className="text-white/70 hover:text-neon-green hover:text-glow transition-colors font-light">Home</Link>
@@ -519,6 +531,23 @@ const HomePage = () => {
           </div>
         </div>
       </footer>
+      <LocateKioskModal open={showLocate} onClose={() => setShowLocate(false)} />
+      <HostKioskModal open={showHost} onClose={() => setShowHost(false)} />
+      {showComingSoon && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+          <div className="bg-tech-black rounded-3xl p-8 max-w-md w-full shadow-2xl border border-neon-green/30 relative text-center">
+            <button
+              onClick={() => setShowComingSoon(null)}
+              className="absolute top-4 right-4 text-neon-green hover:text-white text-xl font-bold"
+              aria-label="Close"
+            >
+              ×
+            </button>
+            <h2 className="text-2xl font-light text-primary mb-6">{showComingSoon} Coming Soon!</h2>
+            <p className="text-white/80 font-light">This feature will be available in a future update.</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -7,9 +7,10 @@ interface PalmScanBoxProps {
   demoMode?: boolean;
   scanning?: boolean;
   videoElement?: React.ReactNode; // New prop for video
+  showPalmImage?: boolean; // NEW: control palm image rendering
 }
 
-const PalmScanBox: React.FC<PalmScanBoxProps> = ({ isAligned, feedbackMsg, demoMode = false, scanning = false, videoElement }) => {
+const PalmScanBox: React.FC<PalmScanBoxProps> = ({ isAligned, feedbackMsg, demoMode = false, scanning = false, videoElement, showPalmImage = true }) => {
   const scanBarRef = useRef<HTMLDivElement>(null);
   // Animate scan bar (only if scanning and not registration)
   useEffect(() => {
@@ -70,13 +71,15 @@ const PalmScanBox: React.FC<PalmScanBoxProps> = ({ isAligned, feedbackMsg, demoM
           }}
         >
           {/* Palm Outline SVG (fill 98% of scan box) */}
-          <img
-            src={handPng}
-            alt="Palm Outline"
-            className="absolute object-contain opacity-90 pointer-events-none mx-auto my-auto"
-            draggable={false}
-            style={{ width: '98%', height: '98%', left: '1%', top: '1%' }}
-          />
+          {showPalmImage && (
+            <img
+              src={handPng}
+              alt="Palm Outline"
+              className="absolute object-contain opacity-90 pointer-events-none mx-auto my-auto"
+              draggable={false}
+              style={{ width: '98%', height: '98%', left: '1%', top: '1%' }}
+            />
+          )}
           {/* Scanning Bar (only if isAligned, 98% width, matches box edges) */}
           {isAligned && (
             <div

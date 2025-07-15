@@ -1,9 +1,15 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Shield, Lock, Eye, Database, Cpu, Fingerprint, ChevronDown, ChevronUp, CheckCircle, MapPin, Building, Smartphone, Award, Zap, Globe, Users } from 'lucide-react';
+import PosSpecsModal from '../components/PosSpecsModal';
+import HostKioskModal from '../components/HostKioskModal';
+import LocateKioskModal from '../components/LocateKioskModal';
 
 const TechnologyPage = () => {
   const [openAccordion, setOpenAccordion] = useState<number | null>(null);
+  const [showSpecs, setShowSpecs] = useState(false);
+  const [showHost, setShowHost] = useState(false);
+  const [showLocate, setShowLocate] = useState(false);
 
   const techFeatures = [
     {
@@ -381,19 +387,31 @@ const TechnologyPage = () => {
             transition={{ duration: 0.8, delay: 0.4 }}
             className="flex flex-wrap justify-center gap-4 mt-12"
           >
-            <button className="btn-primary px-6 py-3 rounded-full flex items-center space-x-2">
+            <button
+              className="btn-primary px-6 py-3 rounded-full flex items-center space-x-2"
+              onClick={() => setShowSpecs(true)}
+            >
               <Building className="w-5 h-5" />
               <span>View POS Specs</span>
             </button>
-            <button className="btn-secondary px-6 py-3 rounded-full flex items-center space-x-2">
+            <button
+              className="btn-secondary px-6 py-3 rounded-full flex items-center space-x-2"
+              onClick={() => setShowHost(true)}
+            >
               <MapPin className="w-5 h-5" />
               <span>Host a Kiosk</span>
             </button>
-            <button className="btn-secondary px-6 py-3 rounded-full flex items-center space-x-2">
+            <button
+              className="btn-secondary px-6 py-3 rounded-full flex items-center space-x-2"
+              onClick={() => setShowLocate(true)}
+            >
               <MapPin className="w-5 h-5" />
               <span>Locate PalmKiosk</span>
             </button>
           </motion.div>
+          <PosSpecsModal open={showSpecs} onClose={() => setShowSpecs(false)} />
+          <HostKioskModal open={showHost} onClose={() => setShowHost(false)} />
+          <LocateKioskModal open={showLocate} onClose={() => setShowLocate(false)} />
         </div>
       </section>
 

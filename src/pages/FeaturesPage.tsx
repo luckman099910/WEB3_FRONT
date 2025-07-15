@@ -37,63 +37,81 @@ const FeaturesPage = () => {
       icon: Hand,
       title: 'PalmScan™',
       description: 'Front camera biometric authentication with liveness detection',
-      color: 'from-neon-green to-neon-aqua'
+      color: 'from-neon-green to-neon-aqua',
+      id: 'palm-scan',
+      comingSoon: false
     },
     {
       icon: Coins,
       title: 'INR Wallets',
       description: 'Direct INR wallet for users and merchants with instant transfers',
-      color: 'from-green-400 to-cyan-400'
+      color: 'from-green-400 to-cyan-400',
+      id: 'inr-wallets',
+      comingSoon: false
     },
     {
       icon: Smartphone,
       title: 'Palm2QR',
       description: 'Hybrid mode combining palm scan with QR code generation',
       color: 'from-blue-400 to-purple-400',
-      badge: 'Coming Soon'
+      id: 'palm2qr',
+      comingSoon: false
     },
     {
       icon: WifiOff,
       title: 'Offline Buffer Mode',
       description: 'Process payments offline and sync when connection returns',
-      color: 'from-yellow-400 to-orange-400'
+      color: 'from-yellow-400 to-orange-400',
+      id: 'offline-buffer-mode',
+      comingSoon: true
     },
     {
       icon: CreditCard,
       title: 'Utility Bill Pay',
       description: 'Pay electricity, water, gas bills directly through palm scan',
-      color: 'from-teal-400 to-cyan-400'
+      color: 'from-teal-400 to-cyan-400',
+      id: 'utility-bill-pay',
+      comingSoon: true
     },
     {
       icon: Bell,
       title: 'SIM-Linked Login',
       description: 'Secure authentication linked to your mobile SIM card',
-      color: 'from-indigo-400 to-purple-400'
+      color: 'from-indigo-400 to-purple-400',
+      id: 'sim-linked-login',
+      comingSoon: true
     },
     {
       icon: Gift,
       title: 'PalmPoints',
       description: 'Earn 5-20 points per scan, redeem for rewards and cashback',
-      color: 'from-purple-400 to-pink-400'
+      color: 'from-purple-400 to-pink-400',
+      id: 'palmpoints',
+      comingSoon: false
     },
     {
       icon: TrendingUp,
       title: 'PalmStars Tiers',
       description: 'Silver, Gold, Platinum tiers with increasing benefits',
-      color: 'from-orange-400 to-red-400'
+      color: 'from-orange-400 to-red-400',
+      id: 'palmstars-tiers',
+      comingSoon: false
     },
     {
       icon: Shield,
       title: 'Consent Logging',
       description: 'Blockchain-based consent management with full user control',
-      color: 'from-gray-400 to-slate-400'
+      color: 'from-gray-400 to-slate-400',
+      id: 'consent-logging',
+      comingSoon: false
     },
     {
       icon: Globe,
       title: 'UPI Integration',
       description: 'Seamless integration with existing UPI payment systems',
       color: 'from-neon-green to-neon-aqua',
-      badge: 'Roadmap'
+      id: 'upi-integration',
+      comingSoon: true
     }
   ];
 
@@ -220,16 +238,24 @@ const FeaturesPage = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {features.map((feature, index) => (
-              <motion.div
+              <motion.button
                 key={index}
+                type="button"
+                onClick={() => {
+                  const el = document.getElementById(feature.id);
+                  if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }
+                }}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: index * 0.1 }}
-                className="group relative p-6 rounded-3xl glass-card hover:border-neon-green/30 transition-all duration-300 hover:scale-105"
+                className="group relative p-6 rounded-3xl glass-card hover:border-neon-green/30 transition-all duration-300 hover:scale-105 text-left w-full"
+                style={{ cursor: 'pointer' }}
               >
-                {feature.badge && (
-                  <div className="absolute -top-2 -right-2 px-3 py-1 rounded-full bg-neon-aqua text-tech-black text-xs font-normal">
-                    {feature.badge}
+                {feature.comingSoon && (
+                  <div className="absolute -top-2 -right-2 px-3 py-1 rounded-full bg-neon-aqua text-tech-black text-xs font-normal shadow-lg">
+                    Coming Soon
                   </div>
                 )}
                 <div className={`p-4 rounded-2xl bg-gradient-to-br ${feature.color} bg-opacity-20 w-fit mb-4 group-hover:scale-110 transition-transform`}>
@@ -237,12 +263,30 @@ const FeaturesPage = () => {
                 </div>
                 <h3 className="text-xl font-light text-primary mb-2">{feature.title}</h3>
                 <p className="text-text-secondary font-light text-sm">{feature.description}</p>
-                
-                {/* Hover overlay */}
                 <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-neon-green/10 to-neon-aqua/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
-              </motion.div>
+              </motion.button>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Add detailed sections for each feature below: */}
+      <section className="py-20 bg-black/20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
+          {features.map((feature, idx) => (
+            <div key={feature.id} id={feature.id} className="rounded-3xl glass-card p-8 mb-8 scroll-mt-24">
+              <div className="flex items-center gap-4 mb-4">
+                <feature.icon className="w-8 h-8 text-neon-green" />
+                <h2 className="text-2xl font-bold text-primary">{feature.title}</h2>
+                {feature.comingSoon && (
+                  <span className="ml-4 px-3 py-1 rounded-full bg-neon-aqua text-tech-black text-xs font-normal shadow-lg">Coming Soon</span>
+                )}
+              </div>
+              <p className="text-text-secondary text-lg mb-2">{feature.description}</p>
+              {/* Add more detailed content for each feature here as needed */}
+              <div className="text-white/70 font-light text-sm">Detailed explanation for {feature.title} goes here. You can expand this section with more info, images, or links as needed.</div>
+            </div>
+          ))}
         </div>
       </section>
 

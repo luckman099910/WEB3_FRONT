@@ -30,6 +30,7 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel, demoMode = fal
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const lastLandmarks = useRef<any>(null);
   const sentRef = useRef(false);
+  const [showCamera, setShowCamera] = useState(true); // NEW: toggle state
 
   // Camera and MediaPipe Hands setup
   useEffect(() => {
@@ -247,13 +248,22 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel, demoMode = fal
 
   return (
     <div className="flex flex-col items-center justify-center w-full max-w-2xl mx-auto">
+      {/* Toggle Button */}
+      <button
+        type="button"
+        onClick={() => setShowCamera((prev) => !prev)}
+        className="mb-4 px-5 py-2 rounded-full bg-gradient-to-r from-neon-green to-sky-blue text-black font-medium hover:shadow-lg transition-all duration-300"
+        style={{ alignSelf: 'flex-end' }}
+      >
+        {showCamera ? 'Show Points Only' : 'Show Camera'}
+      </button>
       <PalmScanBox
         isAligned={handInBox && !scanComplete}
         feedbackMsg={feedbackMsg + (timer > 0 && handInBox && !scanComplete ? ` (${timer})` : '')}
         demoMode={demoMode}
         scanning={handInBox && !scanComplete}
         videoElement={
-          !demoMode ? (
+          showCamera && !demoMode ? (
             <video
               ref={videoRef}
               autoPlay
@@ -265,7 +275,7 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel, demoMode = fal
           ) : null
         }
       />
-      {/* Progress Bar */}
+      {/* Progress Bar and Controls */}
       <div className="w-full mt-4 flex flex-col items-center">
         <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden mb-2">
           <div className="h-2 bg-gradient-to-r from-neon-green to-sky-blue rounded-full" style={{ width: `${Math.round(((TIMER_SECONDS-timer)/TIMER_SECONDS)*100)}%` }} />

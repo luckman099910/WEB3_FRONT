@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=400, initial-scale=1.0">
+  <title>Hand Scan & Verify</title>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/crypto-js@4.1.1/crypto-js.js"></script>
+  <style>
+    body {
+      background: #181c20;
+      color: #f3f3f3;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 0;
+    }
+    h1 {
+      margin-top: 32px;
+      font-size: 2rem;
+      letter-spacing: 1px;
+    }
+    .camera-select-row {
+      margin-top: 18px;
+      margin-bottom: 0;
+      width: 400px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      justify-content: flex-start;
+    }
+    .camera-select-row label {
+      font-size: 1rem;
+      color: #aaa;
+    }
+    .camera-select-row select {
+      font-size: 1rem;
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: none;
+      background: #23272e;
+      color: #fff;
+      outline: 1px solid #2d8cff44;
+    }
+    .container {
+      margin-top: 12px;
+      background: #23272e;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px #0008;
+      padding: 24px 32px 32px 32px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    video, canvas {
+      width: 400px;
+      height: 300px;
+      border-radius: 12px;
+      background: #111;
+      box-shadow: 0 2px 8px #0006;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+    .video-canvas-wrapper {
+      position: relative;
+      width: 400px;
+      height: 300px;
+      margin-bottom: 18px;
+    }
+    .btn-row {
+      display: flex;
+      gap: 16px;
+      margin: 18px 0 10px 0;
+    }
+    button {
+      background: #2d8cff;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 24px;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:active {
+      background: #1a5bb8;
+    }
+    .output {
+      margin-top: 10px;
+      background: #181c20;
+      border-radius: 8px;
+      padding: 12px 16px;
+      min-width: 340px;
+      word-break: break-all;
+      font-size: 0.98rem;
+      box-shadow: 0 1px 4px #0004;
+    }
+    .match {
+      color: #2dff7a;
+      font-weight: bold;
+    }
+    .mismatch {
+      color: #ff4d4d;
+      font-weight: bold;
+    }
+    .progress-bar {
+      width: 100%;
+      height: 12px;
+      background: #333;
+      border-radius: 6px;
+      margin: 10px 0 0 0;
+      overflow: hidden;
+      box-shadow: 0 1px 4px #0004;
+    }
+    .progress {
+      height: 100%;
+      background: #2d8cff;
+      transition: width 0.1s;
+    }
+    .user-list {
+      margin: 10px 0 0 0;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+    }
+    .user-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 1rem;
+      background: #222;
+      border-radius: 6px;
+      padding: 4px 10px;
+      margin-bottom: 2px;
+    }
+    .user-item.selected {
+      background: #2d8cff33;
+      font-weight: bold;
+    }
+    .user-delete {
+      background: #ff4d4d;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      margin-left: 8px;
+    }
+    .user-delete:active {
+      background: #b80000;
+    }
+    .register-row {
+      display: flex;
+      gap: 8px;
+      margin: 10px 0 0 0;
+      width: 100%;
+      align-items: center;
+      justify-content: flex-start;
+    }
+    .register-row input {
+      padding: 7px 10px;
+      border-radius: 6px;
+      border: none;
+      font-size: 1rem;
+      width: 120px;
+      background: #181c20;
+      color: #fff;
+      outline: 1px solid #2d8cff44;
+    }
+    @media (max-width: 450px) {
+      .container, .video-canvas-wrapper, video, canvas, .camera-select-row {
+        width: 98vw;
+        min-width: unset;
+        max-width: 100vw;
+      }
+      .output {
+        min-width: unset;
+        width: 90vw;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>Hand Scan & Verify</h1>
+  <div class="camera-select-row">
+    <label for="cameraSelect">Camera:</label>
+    <select id="cameraSelect"></select>
+  </div>
+  <div class="container">
+    <div class="video-canvas-wrapper">
+      <video id="input_video" autoplay playsinline muted></video>
+      <canvas id="overlay"></canvas>
+    </div>
+    <div class="progress-bar"><div class="progress" id="progress" style="width:0%"></div></div>
+    <div class="register-row">
+      <input id="username" maxlength="20" placeholder="Name (max 10)" />
+      <button id="registerBtn">Register</button>
+    </div>
+    <div class="user-list" id="userList"></div>
+    <div class="btn-row">
+      <button id="verifyBtn">Verify Selected</button>
+    </div>
+    <div class="output" id="verifyOutput">Verification: <span id="verifyResult">-</span></div>
+  </div>
+  <script>
+    // UI Elements
+    const video = document.getElementById('input_video');
+    const canvas = document.getElementById('overlay');
+    const ctx = canvas.getContext('2d');
+    const registerBtn = document.getElementById('registerBtn');
+    const verifyBtn = document.getElementById('verifyBtn');
+    const usernameInput = document.getElementById('username');
+    const userListDiv = document.getElementById('userList');
+    const progressBar = document.getElementById('progress');
+    const verifyResult = document.getElementById('verifyResult');
+    const verifyOutput = document.getElementById('verifyOutput');
+    const cameraSelect = document.getElementById('cameraSelect');
+
+    // State
+    let currentLandmarks = null;
+    let handInBox = false;
+    let steadyStart = null;
+    let steadyTimer = null;
+    let progress = 0;
+    let selectedUser = null;
+    let users = [];
+    const MAX_USERS = 10;
+    const STEADY_TIME = 5000; // ms
+    let currentStream = null;
+    let camera = null;
+    let cameraDevices = [];
+
+    // Guide box (centered)
+    const GUIDE_BOX = {
+      x: 60, y: 30, w: 280, h: 240
+    };
+
+    // LocalStorage helpers
+    function loadUsers() {
+      try {
+        users = JSON.parse(localStorage.getItem('handUsers') || '[]');
+      } catch { users = []; }
+      if (!Array.isArray(users)) users = [];
+      if (users.length > MAX_USERS) users = users.slice(0, MAX_USERS);
+    }
+    function saveUsers() {
+      localStorage.setItem('handUsers', JSON.stringify(users));
+    }
+
+    // UI: user list
+    function renderUserList() {
+      userListDiv.innerHTML = '';
+      users.forEach((user, idx) => {
+        const div = document.createElement('div');
+        div.className = 'user-item' + (selectedUser === idx ? ' selected' : '');
+        div.innerHTML = `<span>${user.name}</span>`;
+        div.onclick = () => { selectedUser = idx; renderUserList(); };
+        const del = document.createElement('button');
+        del.textContent = 'Delete';
+        del.className = 'user-delete';
+        del.onclick = (e) => {
+          e.stopPropagation();
+          users.splice(idx, 1);
+          if (selectedUser === idx) selectedUser = null;
+          else if (selectedUser > idx) selectedUser--;
+          saveUsers();
+          renderUserList();
+        };
+        div.appendChild(del);
+        userListDiv.appendChild(div);
+      });
+    }
+
+    // MediaPipe Hands setup
+    const hands = new Hands({
+      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+    });
+    hands.setOptions({
+      maxNumHands: 1,
+      modelComplexity: 1,
+      minDetectionConfidence: 0.7,
+      minTrackingConfidence: 0.7
+    });
+    hands.onResults(onResults);
+
+    // Camera setup
+    async function startCamera(deviceId) {
+      if (currentStream) {
+        currentStream.getTracks().forEach(track => track.stop());
+      }
+      let constraints = {
+        video: {
+          deviceId: deviceId ? { exact: deviceId } : undefined,
+          width: { ideal: 400 },
+          height: { ideal: 300 }
+        },
+        audio: false
+      };
+      try {
+        currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+        video.srcObject = currentStream;
+        if (camera) camera.stop();
+        camera = new Camera(video, {
+          onFrame: async () => {
+            await hands.send({image: video});
+          },
+          width: 400,
+          height: 300
+        });
+        camera.start();
+      } catch (e) {
+        alert('Could not access camera: ' + e.message);
+      }
+    }
+
+    // Camera device selection
+    async function updateCameraList() {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        cameraDevices = devices.filter(d => d.kind === 'videoinput');
+        cameraSelect.innerHTML = '';
+        cameraDevices.forEach((device, idx) => {
+          const option = document.createElement('option');
+          option.value = device.deviceId;
+          option.text = device.label || `Camera ${idx+1}`;
+          cameraSelect.appendChild(option);
+        });
+        if (cameraDevices.length > 0) {
+          cameraSelect.value = cameraDevices[0].deviceId;
+          startCamera(cameraDevices[0].deviceId);
+        }
+      } catch (e) {
+        alert('Could not enumerate cameras: ' + e.message);
+      }
+    }
+    cameraSelect.onchange = () => {
+      startCamera(cameraSelect.value);
+    };
+
+    // Normalize landmarks for stable hash
+    function normalizeLandmarks(landmarks) {
+      const base = landmarks[0]; // wrist
+      // Find bounding box for normalization
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (const p of landmarks) {
+        minX = Math.min(minX, p.x);
+        minY = Math.min(minY, p.y);
+        maxX = Math.max(maxX, p.x);
+        maxY = Math.max(maxY, p.y);
+      }
+      const size = Math.max(maxX - minX, maxY - minY) || 1;
+      // Center and scale
+      return landmarks.map(p => ({
+        x: parseFloat(((p.x - base.x) / size).toFixed(4)),
+        y: parseFloat(((p.y - base.y) / size).toFixed(4)),
+        z: parseFloat(((p.z - base.z) / size).toFixed(4))
+      }));
+    }
+
+    // Hash function
+    function hashPalm(landmarks) {
+      const norm = normalizeLandmarks(landmarks);
+      const json = JSON.stringify(norm);
+      return CryptoJS.SHA256(json).toString();
+    }
+
+    // Check if all landmarks are inside the guide box
+    function isHandInBox(landmarks) {
+      if (!landmarks) return false;
+      for (const p of landmarks) {
+        const x = p.x * canvas.width;
+        const y = p.y * canvas.height;
+        if (
+          x < GUIDE_BOX.x + 4 ||
+          x > GUIDE_BOX.x + GUIDE_BOX.w - 4 ||
+          y < GUIDE_BOX.y + 4 ||
+          y > GUIDE_BOX.y + GUIDE_BOX.h - 4
+        ) return false;
+      }
+      return true;
+    }
+
+    // Draw guide box and hand skeleton
+    function drawOverlay(landmarks, handInBox, progress) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // Draw guide box
+      ctx.save();
+      ctx.strokeStyle = handInBox ? '#2dff7a' : '#ff4d4d';
+      ctx.lineWidth = 4;
+      ctx.setLineDash([8, 6]);
+      ctx.strokeRect(GUIDE_BOX.x, GUIDE_BOX.y, GUIDE_BOX.w, GUIDE_BOX.h);
+      ctx.restore();
+      // Draw hand skeleton
+      if (landmarks) {
+        // Draw lines
+        const connections = [
+          [0,1],[1,2],[2,3],[3,4],      // Thumb
+          [0,5],[5,6],[6,7],[7,8],      // Index
+          [5,9],[9,10],[10,11],[11,12], // Middle
+          [9,13],[13,14],[14,15],[15,16], // Ring
+          [13,17],[17,18],[18,19],[19,20], // Pinky
+          [0,17] // Palm base
+        ];
+        ctx.save();
+        ctx.strokeStyle = '#ffb300';
+        ctx.lineWidth = 2.5;
+        ctx.setLineDash([]);
+        for (const [a, b] of connections) {
+          const pa = toCanvas(landmarks[a]);
+          const pb = toCanvas(landmarks[b]);
+          ctx.beginPath();
+          ctx.moveTo(pa.x, pa.y);
+          ctx.lineTo(pb.x, pb.y);
+          ctx.stroke();
+        }
+        ctx.restore();
+        // Draw points
+        ctx.save();
+        ctx.fillStyle = '#2d8cff';
+        for (const p of landmarks) {
+          const pt = toCanvas(p);
+          ctx.beginPath();
+          ctx.arc(pt.x, pt.y, 4, 0, 2 * Math.PI);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+    }
+
+    // Convert normalized landmark to canvas coordinates
+    function toCanvas(p) {
+      return {
+        x: p.x * canvas.width,
+        y: p.y * canvas.height
+      };
+    }
+
+    // MediaPipe callback
+    function onResults(results) {
+      if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+        currentLandmarks = results.multiHandLandmarks[0];
+        handInBox = isHandInBox(currentLandmarks);
+      } else {
+        currentLandmarks = null;
+        handInBox = false;
+      }
+      // Steady hand logic
+      if (handInBox) {
+        if (!steadyStart) steadyStart = Date.now();
+        progress = Math.min(1, (Date.now() - steadyStart) / STEADY_TIME);
+      } else {
+        steadyStart = null;
+        progress = 0;
+      }
+      progressBar.style.width = (progress * 100) + '%';
+      drawOverlay(currentLandmarks, handInBox, progress);
+    }
+
+    // Register button: add user
+    registerBtn.onclick = async () => {
+      if (users.length >= MAX_USERS) {
+        alert('Maximum 10 users allowed. Delete a user to add more.');
+        return;
+      }
+      const name = usernameInput.value.trim();
+      if (!name) {
+        alert('Enter a name.');
+        return;
+      }
+      if (users.some(u => u.name === name)) {
+        alert('Name already exists.');
+        return;
+      }
+      if (!currentLandmarks || !handInBox || progress < 1) {
+        alert('Hold your hand steady in the box for 5 seconds to register.');
+        return;
+      }
+      const hash = hashPalm(currentLandmarks);
+      users.push({ name, hash });
+      saveUsers();
+      renderUserList();
+      usernameInput.value = '';
+      alert('User registered!');
+    };
+
+    // Verify button: check selected user
+    verifyBtn.onclick = () => {
+      if (selectedUser === null || selectedUser === undefined) {
+        verifyResult.textContent = 'Select a user!';
+        verifyOutput.className = 'output mismatch';
+        return;
+      }
+      if (!currentLandmarks || !handInBox || progress < 1) {
+        verifyResult.textContent = 'Hold hand steady in box for 5s!';
+        verifyOutput.className = 'output mismatch';
+        return;
+      }
+      const hash = hashPalm(currentLandmarks);
+      if (hash === users[selectedUser].hash) {
+        verifyResult.textContent = 'MATCH (' + users[selectedUser].name + ')';
+        verifyOutput.className = 'output match';
+      } else {
+        verifyResult.textContent = 'MISMATCH';
+        verifyOutput.className = 'output mismatch';
+      }
+    };
+
+    // Set canvas size
+    function resizeCanvas() {
+      canvas.width = 400;
+      canvas.height = 300;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    // Init
+    loadUsers();
+    renderUserList();
+    updateCameraList();
+    // Listen for device changes (e.g., plug/unplug camera)
+    if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) {
+      navigator.mediaDevices.addEventListener('devicechange', updateCameraList);
+    }
+  </script>
+</body>
+</html> 

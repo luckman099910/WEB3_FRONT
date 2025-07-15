@@ -37,6 +37,12 @@ const AdminPage = () => {
   const [sendValueLoading, setSendValueLoading] = useState(false);
   const [sendValueError, setSendValueError] = useState('');
   const [sendValueSuccess, setSendValueSuccess] = useState('');
+  const [inquiries, setInquiries] = useState([]);
+  const [inquiriesLoading, setInquiriesLoading] = useState(false);
+  const [inquiriesError, setInquiriesError] = useState('');
+  const [vendors, setVendors] = useState([]);
+  const [vendorsLoading, setVendorsLoading] = useState(false);
+  const [vendorsError, setVendorsError] = useState('');
   const navigate = useNavigate();
 
   // Admin check
@@ -161,9 +167,30 @@ const AdminPage = () => {
     { label: 'Users', icon: Users },
     { label: 'Send Value', icon: DollarSign },
     { label: 'Transactions', icon: CreditCard },
-    { label: 'Applicants', icon: Hand }
+    { label: 'Applicants', icon: Hand },
+    { label: 'Inquiries', icon: AlertCircle },
+    { label: 'Vendor Registrations', icon: CheckCircle }
   ];
   // Duplicate tabIndex declaration removed here
+
+  useEffect(() => {
+    if (tabIndex === 4) {
+      setInquiriesLoading(true);
+      setInquiriesError('');
+      api.get('/api/inquiry')
+        .then((res) => setInquiries(res.data?.inquiries || []))
+        .catch((err) => setInquiriesError(err.message || 'Failed to load inquiries'))
+        .finally(() => setInquiriesLoading(false));
+    }
+    if (tabIndex === 5) {
+      setVendorsLoading(true);
+      setVendorsError('');
+      api.get('/api/vendor-registration')
+        .then((res) => setVendors(res.data?.registrations || []))
+        .catch((err) => setVendorsError(err.message || 'Failed to load vendor registrations'))
+        .finally(() => setVendorsLoading(false));
+    }
+  }, [tabIndex]);
 
   // Add delete API calls
   const deleteUser = async (userId: string) => {
@@ -422,6 +449,78 @@ const AdminPage = () => {
                             Delete
                           </button>
                         </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
+          {tabIndex === 4 && (
+            <div>
+              <h2 className="text-xl font-bold mb-4">General Inquiries</h2>
+              {inquiriesLoading ? (
+                <div className="text-text-secondary">Loading inquiries...</div>
+              ) : inquiriesError ? (
+                <div className="text-red-400">{inquiriesError}</div>
+              ) : (
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-white/10">
+                      <th className="py-2 px-3">Name</th>
+                      <th className="py-2 px-3">Email/Phone</th>
+                      <th className="py-2 px-3">Role</th>
+                      <th className="py-2 px-3">Message</th>
+                      <th className="py-2 px-3">Created</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {inquiries.map((inq: any) => (
+                      <tr key={inq.id} className="border-b border-white/5 hover:bg-white/5">
+                        <td className="py-2 px-3">{inq.name}</td>
+                        <td className="py-2 px-3">{inq.email_or_phone}</td>
+                        <td className="py-2 px-3">{inq.role}</td>
+                        <td className="py-2 px-3">{inq.message}</td>
+                        <td className="py-2 px-3">{inq.created_at?.slice(0, 10)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
+          {tabIndex === 5 && (
+            <div>
+              <h2 className="text-xl font-bold mb-4">Vendor Registrations</h2>
+              {vendorsLoading ? (
+                <div className="text-text-secondary">Loading vendor registrations...</div>
+              ) : vendorsError ? (
+                <div className="text-red-400">{vendorsError}</div>
+              ) : (
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-white/10">
+                      <th className="py-2 px-3">Business Name</th>
+                      <th className="py-2 px-3">Owner Name</th>
+                      <th className="py-2 px-3">Email</th>
+                      <th className="py-2 px-3">Phone</th>
+                      <th className="py-2 px-3">Address</th>
+                      <th className="py-2 px-3">Interests</th>
+                      <th className="py-2 px-3">Comments</th>
+                      <th className="py-2 px-3">Created</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {vendors.map((v: any) => (
+                      <tr key={v.id} className="border-b border-white/5 hover:bg-white/5">
+                        <td className="py-2 px-3">{v.business_name}</td>
+                        <td className="py-2 px-3">{v.owner_name}</td>
+                        <td className="py-2 px-3">{v.email}</td>
+                        <td className="py-2 px-3">{v.phone}</td>
+                        <td className="py-2 px-3">{v.address}</td>
+                        <td className="py-2 px-3">{Array.isArray(v.interests) ? v.interests.join(', ') : v.interests}</td>
+                        <td className="py-2 px-3">{v.comments}</td>
+                        <td className="py-2 px-3">{v.created_at?.slice(0, 10)}</td>
                       </tr>
                     ))}
                   </tbody>
