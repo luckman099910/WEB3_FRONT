@@ -264,16 +264,7 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel, demoMode = fal
   }
 
   return (
-    <div className="flex flex-col items-center justify-center w-full max-w-2xl mx-auto">
-      {/* Return Button at the top */}
-      <button
-        type="button"
-        onClick={onCancel}
-        className="self-start mb-4 flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 text-white font-medium hover:bg-white/20 transition-all duration-300"
-        style={{ position: 'absolute', top: 24, left: 24, zIndex: 50 }}
-      >
-        <span style={{ fontSize: 20, display: 'inline-block', transform: 'translateY(1px)' }}>&larr;</span> <span>Return</span>
-      </button>
+    <div className="flex flex-col items-center justify-center w-full max-w-2xl mx-auto relative">
       {/* Toggle Button */}
       <button
         type="button"
@@ -333,8 +324,16 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel, demoMode = fal
             Re-register
           </button>
         )}
-        {/* Cancel button removed */}
       </div>
+      {/* Return Button at the bottom center */}
+      <button
+        type="button"
+        onClick={onCancel}
+        className="fixed bottom-8 left-1/2 -translate-x-1/2 px-8 py-3 rounded-full bg-white/10 text-white font-medium hover:bg-white/20 transition-all duration-300 z-30"
+        style={{ fontSize: 20, display: 'flex', alignItems: 'center', gap: 8 }}
+      >
+        <span style={{ fontSize: 22, display: 'inline-block', transform: 'translateY(1px)' }}>&larr;</span> <span>Return</span>
+      </button>
     </div>
   );
 };
