@@ -240,6 +240,7 @@ const AdminPage = () => {
                     // CSV generation logic
                     if (!users || users.length === 0) return;
                     const headers = [
+                      'ID',
                       'Name',
                       'Email',
                       'Balance',
@@ -248,6 +249,7 @@ const AdminPage = () => {
                       'Created'
                     ];
                     const rows = users.map((u: any) => [
+                      u.id,
                       u.username,
                       u.email,
                       u.balance,
