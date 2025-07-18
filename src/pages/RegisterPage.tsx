@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Layout from '../components/Layout';
-import { initiateRegistration, verifyRegistrationOTP, verifyRegistrationOTPCode, completeRegistrationWithOTP } from '../api/registerApi';
 import emailjs from '@emailjs/browser';
+import config from '../config';
 
 // EMAILJS CONFIG - FILL THESE WITH YOUR OWN CREDENTIALS
 const EMAILJS_SERVICE_ID = 'service_7t156nd';
@@ -96,7 +96,7 @@ const RegisterPage = () => {
       } else if (isPhone(contact)) {
         setOtpMethod('phone');
         // Send OTP via backend Twilio Verify endpoint
-        const response = await fetch('/api/send-sms-otp', {
+        const response = await fetch(`${config.API_BASE_URL}/api/send-sms-otp`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ phone: contact })
@@ -132,7 +132,7 @@ const RegisterPage = () => {
         }
       } else if (otpMethod === 'phone') {
         // Verify OTP via backend
-        const response = await fetch('/api/verify-sms-otp', {
+        const response = await fetch(`${config.API_BASE_URL}/api/verify-sms-otp`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ phone: contact, otp })
@@ -178,7 +178,7 @@ const RegisterPage = () => {
         payload.phone = contact;
       }
       // Call backend /signup endpoint
-      const response = await fetch('/api/auth/signup', {
+      const response = await fetch(`${config.API_BASE_URL}/api/auth/signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
