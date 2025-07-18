@@ -18,6 +18,7 @@ import TransferPage from './pages/TransferPage';
 import HistoryPage from './pages/HistoryPage';
 import ReceivePage from './pages/ReceivePage';
 import { useEffect } from 'react';
+import { Toaster } from 'react-hot-toast';
 
 function RequireAuth({ children }: { children: JSX.Element }) {
   const location = useLocation();
@@ -54,6 +55,7 @@ function App() {
   return (
     <Router>
       <div className="min-h-screen bg-tech-blue font-space font-light">
+        <Toaster position="top-right" toastOptions={{ duration: 3500, style: { background: '#23293a', color: '#fff', fontSize: '1rem' } }} />
         <Layout>
           <AnimatePresence mode="wait">
             <Routes>

@@ -17,9 +17,10 @@ import {
 import { useNavigate } from 'react-router-dom';
 import AdminBalanceManager from '../components/AdminBalanceManager';
 import logo from '../assets/palmpay-logo.png';
-import { getUsers, assignBalance } from '../api/adminApi';
+import { getUsers, assignBalance, resetPassword } from '../api/adminApi';
 import { getApplicants } from '../api/applicantsApi';
 import { api } from '../api/palmPayApi';
+import { Toaster, toast } from 'react-hot-toast';
 
 const AdminPage = () => {
   const [tabIndex, setTabIndex] = useState(0);
@@ -244,6 +245,7 @@ const AdminPage = () => {
                       'Name',
                       'Email',
                       'Balance',
+                      'Palm Hash',
                       'Role',
                       'Palm Registered',
                       'Created'
@@ -253,6 +255,7 @@ const AdminPage = () => {
                       u.username,
                       u.email,
                       u.balance,
+                      u.palm_hash,
                       u.role,
                       u.palm_hash ? 'YES' : 'NO',
                       u.created_at?.slice(0, 10)
@@ -280,44 +283,69 @@ const AdminPage = () => {
               ) : usersError ? (
                 <div className="text-red-400">{usersError}</div>
               ) : (
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="border-b border-white/10">
-                      <th className="py-2 px-3">Name</th>
-                      <th className="py-2 px-3">Email</th>
-                      <th className="py-2 px-3">Balance</th>
-                      <th className="py-2 px-3">Role</th>
-                      <th className="py-2 px-3">Plam Registered</th>
-                      <th className="py-2 px-3">Created</th>
-                      <th className="py-2 px-3">Delete</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {users.map((u: any) => (
-                      <tr key={u.id} className="border-b border-white/5 hover:bg-white/5">
-                        <td className="py-2 px-3">{u.username}</td>
-                        <td className="py-2 px-3">{u.email}</td>
-                        <td className="py-2 px-3">{u.balance}</td>
-                        <td className="py-2 px-3">{u.role}</td>
-                        <td className="py-2 px-3">{u.palm_hash?"YES":"NO"}</td>
-                        <td className="py-2 px-3">{u.created_at?.slice(0, 10)}</td>
-                        <td className="py-2 px-3">
-                          <button
-                            className="text-red-400 hover:text-red-600 font-bold"
-                            onClick={async () => {
-                              if (window.confirm('Delete this user?')) {
-                                await deleteUser(u.id);
-                                setUsers(users.filter((user: any) => user.id !== u.id));
-                              }
-                            }}
-                          >
-                            Delete
-                          </button>
-                        </td>
+                <div className="w-full overflow-x-auto rounded-lg">
+                  <table className="min-w-[900px] w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-white/10">
+                        <th className="py-2 px-3">Name</th>
+                        <th className="py-2 px-3">Email</th>
+                        <th className="py-2 px-3">Balance</th>
+                        <th className="py-2 px-3">Palm Hash</th>
+                        <th className="py-2 px-3">Role</th>
+                        <th className="py-2 px-3">Plam Registered</th>
+                        <th className="py-2 px-3">Created</th>
+                        <th className="py-2 px-3">Reset Password</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {users.filter((u: any) => u.role !== 'admin').map((u: any) => (
+                        <tr key={u.id} className="border-b border-white/5 hover:bg-white/5">
+                          <td className="py-2 px-3">{u.username}</td>
+                          <td className="py-2 px-3">{u.email}</td>
+                          <td className="py-2 px-3">{u.balance}</td>
+                          <td className="py-2 px-3">{u.palm_hash}</td>
+                          <td className="py-2 px-3">{u.role}</td>
+                          <td className="py-2 px-3">{u.palm_hash?"YES":"NO"}</td>
+                          <td className="py-2 px-3">{u.created_at?.slice(0, 10)}</td>
+                          <td className="py-2 px-3">
+                            <button
+                              className="text-blue-400 hover:text-blue-600 font-bold"
+                              onClick={async () => {
+                                toast((t) => (
+                                  <span>
+                                    Reset this user's password to <b>"palmpay"</b>?<br/>
+                                    <button
+                                      className="ml-2 px-3 py-1 rounded bg-blue-500 text-white hover:bg-blue-600"
+                                      onClick={async () => {
+                                        toast.dismiss(t.id);
+                                        try {
+                                          await resetPassword(u.id);
+                                          toast.success('Password reset to "palmpay" for this user.');
+                                        } catch (err: any) {
+                                          toast.error('Failed to reset password: ' + (err?.response?.data?.message || err.message));
+                                        }
+                                      }}
+                                    >
+                                      Yes
+                                    </button>
+                                    <button
+                                      className="ml-2 px-3 py-1 rounded bg-gray-500 text-white hover:bg-gray-600"
+                                      onClick={() => toast.dismiss(t.id)}
+                                    >
+                                      Cancel
+                                    </button>
+                                  </span>
+                                ));
+                              }}
+                            >
+                              Reset Password
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </div>
           )}
@@ -372,42 +400,66 @@ const AdminPage = () => {
               ) : transactionsError ? (
                 <div className="text-red-400">{transactionsError}</div>
               ) : (
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="border-b border-white/10">
-                      <th className="py-2 px-3">From User</th>
-                      <th className="py-2 px-3">To Merchant</th>
-                      <th className="py-2 px-3">Amount</th>
-                      <th className="py-2 px-3">Status</th>
-                      <th className="py-2 px-3">Created</th>
-                      <th className="py-2 px-3">Delete</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {transactions.map((t: any) => (
-                      <tr key={t.txid} className="border-b border-white/5 hover:bg-white/5">
-                        <td className="py-2 px-3">{t.from_user_id}</td>
-                        <td className="py-2 px-3">{t.to_merchant_id}</td>
-                        <td className="py-2 px-3">{t.amount}</td>
-                        <td className="py-2 px-3">{t.status}</td>
-                        <td className="py-2 px-3">{t.created_at?.slice(0, 10)}</td>
-                        <td className="py-2 px-3">
-                          <button
-                            className="text-red-400 hover:text-red-600 font-bold"
-                            onClick={async () => {
-                              if (window.confirm('Delete this transaction?')) {
-                                await deleteTransaction(t.txid);
-                                setTransactions(transactions.filter((tx: any) => tx.txid !== t.txid));
-                              }
-                            }}
-                          >
-                            Delete
-                          </button>
-                        </td>
+                <div className="w-full overflow-x-auto rounded-lg">
+                  <table className="min-w-[900px] w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-white/10">
+                        <th className="py-2 px-3">From User</th>
+                        <th className="py-2 px-3">To Merchant</th>
+                        <th className="py-2 px-3">Amount</th>
+                        <th className="py-2 px-3">Status</th>
+                        <th className="py-2 px-3">Created</th>
+                        <th className="py-2 px-3">Delete</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {transactions.map((t: any) => (
+                        <tr key={t.txid} className="border-b border-white/5 hover:bg-white/5">
+                          <td className="py-2 px-3">{t.from_user_id}</td>
+                          <td className="py-2 px-3">{t.to_merchant_id}</td>
+                          <td className="py-2 px-3">{t.amount}</td>
+                          <td className="py-2 px-3">{t.status}</td>
+                          <td className="py-2 px-3">{t.created_at?.slice(0, 10)}</td>
+                          <td className="py-2 px-3">
+                            <button
+                              className="text-red-400 hover:text-red-600 font-bold"
+                              onClick={async () => {
+                                toast((toastInst) => (
+                                  <span>
+                                    Delete this transaction?<br/>
+                                    <button
+                                      className="ml-2 px-3 py-1 rounded bg-red-500 text-white hover:bg-red-600"
+                                      onClick={async () => {
+                                        toast.dismiss(toastInst.id);
+                                        try {
+                                          await deleteTransaction(t.txid);
+                                          setTransactions(transactions.filter((tx: any) => tx.txid !== t.txid));
+                                          toast.success('Transaction deleted.');
+                                        } catch (err: any) {
+                                          toast.error('Failed to delete transaction: ' + (err?.response?.data?.message || err.message));
+                                        }
+                                      }}
+                                    >
+                                      Yes
+                                    </button>
+                                    <button
+                                      className="ml-2 px-3 py-1 rounded bg-gray-500 text-white hover:bg-gray-600"
+                                      onClick={() => toast.dismiss(toastInst.id)}
+                                    >
+                                      Cancel
+                                    </button>
+                                  </span>
+                                ));
+                              }}
+                            >
+                              Delete
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </div>
           )}
@@ -419,42 +471,66 @@ const AdminPage = () => {
               ) : applicantsError ? (
                 <div className="text-red-400">{applicantsError}</div>
               ) : (
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="border-b border-white/10">
-                      <th className="py-2 px-3">Name</th>
-                      <th className="py-2 px-3">Email</th>
-                      <th className="py-2 px-3">Phone</th>
-                      <th className="py-2 px-3">Description</th>
-                      <th className="py-2 px-3">Created</th>
-                      <th className="py-2 px-3">Delete</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {applicants.map((a: any) => (
-                      <tr key={a.id} className="border-b border-white/5 hover:bg-white/5">
-                        <td className="py-2 px-3">{a.username}</td>
-                        <td className="py-2 px-3">{a.email}</td>
-                        <td className="py-2 px-3">{a.phonenumber}</td>
-                        <td className="py-2 px-3">{a.description}</td>
-                        <td className="py-2 px-3">{a.created_at?.slice(0, 10)}</td>
-                        <td className="py-2 px-3">
-                          <button
-                            className="text-red-400 hover:text-red-600 font-bold"
-                            onClick={async () => {
-                              if (window.confirm('Delete this applicant?')) {
-                                await deleteApplicant(a.id);
-                                setApplicants(applicants.filter((app: any) => app.id !== a.id));
-                              }
-                            }}
-                          >
-                            Delete
-                          </button>
-                        </td>
+                <div className="w-full overflow-x-auto rounded-lg">
+                  <table className="min-w-[900px] w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-white/10">
+                        <th className="py-2 px-3">Name</th>
+                        <th className="py-2 px-3">Email</th>
+                        <th className="py-2 px-3">Phone</th>
+                        <th className="py-2 px-3">Description</th>
+                        <th className="py-2 px-3">Created</th>
+                        <th className="py-2 px-3">Delete</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {applicants.map((a: any) => (
+                        <tr key={a.id} className="border-b border-white/5 hover:bg-white/5">
+                          <td className="py-2 px-3">{a.username}</td>
+                          <td className="py-2 px-3">{a.email}</td>
+                          <td className="py-2 px-3">{a.phonenumber}</td>
+                          <td className="py-2 px-3">{a.description}</td>
+                          <td className="py-2 px-3">{a.created_at?.slice(0, 10)}</td>
+                          <td className="py-2 px-3">
+                            <button
+                              className="text-red-400 hover:text-red-600 font-bold"
+                              onClick={async () => {
+                                toast((toastInst) => (
+                                  <span>
+                                    Delete this applicant?<br/>
+                                    <button
+                                      className="ml-2 px-3 py-1 rounded bg-red-500 text-white hover:bg-red-600"
+                                      onClick={async () => {
+                                        toast.dismiss(toastInst.id);
+                                        try {
+                                          await deleteApplicant(a.id);
+                                          setApplicants(applicants.filter((app: any) => app.id !== a.id));
+                                          toast.success('Applicant deleted.');
+                                        } catch (err: any) {
+                                          toast.error('Failed to delete applicant: ' + (err?.response?.data?.message || err.message));
+                                        }
+                                      }}
+                                    >
+                                      Yes
+                                    </button>
+                                    <button
+                                      className="ml-2 px-3 py-1 rounded bg-gray-500 text-white hover:bg-gray-600"
+                                      onClick={() => toast.dismiss(toastInst.id)}
+                                    >
+                                      Cancel
+                                    </button>
+                                  </span>
+                                ));
+                              }}
+                            >
+                              Delete
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </div>
           )}
@@ -466,28 +542,30 @@ const AdminPage = () => {
               ) : inquiriesError ? (
                 <div className="text-red-400">{inquiriesError}</div>
               ) : (
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="border-b border-white/10">
-                      <th className="py-2 px-3">Name</th>
-                      <th className="py-2 px-3">Email/Phone</th>
-                      <th className="py-2 px-3">Role</th>
-                      <th className="py-2 px-3">Message</th>
-                      <th className="py-2 px-3">Created</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {inquiries.map((inq: any) => (
-                      <tr key={inq.id} className="border-b border-white/5 hover:bg-white/5">
-                        <td className="py-2 px-3">{inq.name}</td>
-                        <td className="py-2 px-3">{inq.email_or_phone}</td>
-                        <td className="py-2 px-3">{inq.role}</td>
-                        <td className="py-2 px-3">{inq.message}</td>
-                        <td className="py-2 px-3">{inq.created_at?.slice(0, 10)}</td>
+                <div className="w-full overflow-x-auto rounded-lg">
+                  <table className="min-w-[900px] w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-white/10">
+                        <th className="py-2 px-3">Name</th>
+                        <th className="py-2 px-3">Email/Phone</th>
+                        <th className="py-2 px-3">Role</th>
+                        <th className="py-2 px-3">Message</th>
+                        <th className="py-2 px-3">Created</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {inquiries.map((inq: any) => (
+                        <tr key={inq.id} className="border-b border-white/5 hover:bg-white/5">
+                          <td className="py-2 px-3">{inq.name}</td>
+                          <td className="py-2 px-3">{inq.email_or_phone}</td>
+                          <td className="py-2 px-3">{inq.role}</td>
+                          <td className="py-2 px-3">{inq.message}</td>
+                          <td className="py-2 px-3">{inq.created_at?.slice(0, 10)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </div>
           )}
@@ -499,34 +577,36 @@ const AdminPage = () => {
               ) : vendorsError ? (
                 <div className="text-red-400">{vendorsError}</div>
               ) : (
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="border-b border-white/10">
-                      <th className="py-2 px-3">Business Name</th>
-                      <th className="py-2 px-3">Owner Name</th>
-                      <th className="py-2 px-3">Email</th>
-                      <th className="py-2 px-3">Phone</th>
-                      <th className="py-2 px-3">Address</th>
-                      <th className="py-2 px-3">Interests</th>
-                      <th className="py-2 px-3">Comments</th>
-                      <th className="py-2 px-3">Created</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {vendors.map((v: any) => (
-                      <tr key={v.id} className="border-b border-white/5 hover:bg-white/5">
-                        <td className="py-2 px-3">{v.business_name}</td>
-                        <td className="py-2 px-3">{v.owner_name}</td>
-                        <td className="py-2 px-3">{v.email}</td>
-                        <td className="py-2 px-3">{v.phone}</td>
-                        <td className="py-2 px-3">{v.address}</td>
-                        <td className="py-2 px-3">{Array.isArray(v.interests) ? v.interests.join(', ') : v.interests}</td>
-                        <td className="py-2 px-3">{v.comments}</td>
-                        <td className="py-2 px-3">{v.created_at?.slice(0, 10)}</td>
+                <div className="w-full overflow-x-auto rounded-lg">
+                  <table className="min-w-[900px] w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-white/10">
+                        <th className="py-2 px-3">Business Name</th>
+                        <th className="py-2 px-3">Owner Name</th>
+                        <th className="py-2 px-3">Email</th>
+                        <th className="py-2 px-3">Phone</th>
+                        <th className="py-2 px-3">Address</th>
+                        <th className="py-2 px-3">Interests</th>
+                        <th className="py-2 px-3">Comments</th>
+                        <th className="py-2 px-3">Created</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {vendors.map((v: any) => (
+                        <tr key={v.id} className="border-b border-white/5 hover:bg-white/5">
+                          <td className="py-2 px-3">{v.business_name}</td>
+                          <td className="py-2 px-3">{v.owner_name}</td>
+                          <td className="py-2 px-3">{v.email}</td>
+                          <td className="py-2 px-3">{v.phone}</td>
+                          <td className="py-2 px-3">{v.address}</td>
+                          <td className="py-2 px-3">{Array.isArray(v.interests) ? v.interests.join(', ') : v.interests}</td>
+                          <td className="py-2 px-3">{v.comments}</td>
+                          <td className="py-2 px-3">{v.created_at?.slice(0, 10)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </div>
           )}

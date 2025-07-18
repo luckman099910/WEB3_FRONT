@@ -21,6 +21,8 @@ const TransferPage = () => {
   const [showRegisterPrompt, setShowRegisterPrompt] = useState(false);
   const [retry, setRetry] = useState(false);
   const navigate = useNavigate();
+  // Add a state variable for scanResultMsg
+  const [scanResultMsg, setScanResultMsg] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,7 +57,7 @@ const TransferPage = () => {
     setError('');
     setSuccess('');
     setStatusMsg('Processing transfer...');
-
+    setScanResultMsg('');
     try {
       const user = JSON.parse(localStorage.getItem('user') || '{}');
       const token = localStorage.getItem('session');
@@ -81,14 +83,19 @@ const TransferPage = () => {
       if (response.data.success || response.data.transaction) {
         setSuccess('Transfer completed successfully!');
         setStatusMsg(`Transaction ID: ${response.data.transaction?.id || response.data.transactionId}`);
-        navigate(-1); // Go back on success
+        setScanResultMsg('Transfer successful!');
+        setTimeout(() => navigate('/'), 2000);
       } else {
         setError('Transfer failed. Please try again.');
+        setScanResultMsg('Transfer failed.');
+        setTimeout(() => navigate('/'), 2000);
         setRetry(true);
       }
     } catch (err: any) {
       console.error('Transfer error:', err);
       setError(err.response?.data?.error || err.message || 'Transfer failed. Please try again.');
+      setScanResultMsg('Transfer failed.');
+      setTimeout(() => navigate('/'), 2000);
       setRetry(true);
     } finally {
       setLoading(false);
@@ -117,10 +124,15 @@ const TransferPage = () => {
         <div className="flex justify-center items-center min-h-[70vh]" style={{height:"100vh"}}>
           <div className="w-full max-w-md">
             {!retry && (
-              <HandScan
-                onSuccess={handleHandScanSuccess}
-                onCancel={handleCancel}
-              />
+              <>
+                <HandScan
+                  onSuccess={handleHandScanSuccess}
+                  onCancel={handleCancel}
+                />
+                {scanResultMsg && (
+                  <div className={`mt-6 text-center text-lg font-bold ${scanResultMsg.includes('success') ? 'text-green-400' : 'text-red-400'}`}>{scanResultMsg}</div>
+                )}
+              </>
             )}
             {retry && (
               <div className="flex flex-col items-center justify-center w-full h-full flex-1">

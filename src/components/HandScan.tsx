@@ -306,19 +306,22 @@ const HandScan: React.FC<HandScanProps> = ({ onSuccess, onCancel, demoMode = fal
         <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden mb-2">
           <div className="h-2 bg-gradient-to-r from-neon-green to-sky-blue rounded-full" style={{ width: `${Math.round(((TIMER_SECONDS-timer)/TIMER_SECONDS)*100)}%` }} />
         </div>
-        {error && (
+        {/* Always show a result message */}
+        {error ? (
           <div className="mt-2 p-2 rounded-xl bg-red-500/20 border border-red-500/30 text-red-400 flex items-center gap-2">
             {error}
           </div>
-        )}
-        {backendMsg && requestStatus === 'success' && (
+        ) : requestStatus === 'success' ? (
           <div className="mt-2 p-2 rounded-xl bg-green-500/20 border border-green-500/30 text-green-400 flex items-center gap-2">
-            {backendMsg}
+            {backendMsg || 'Scan successful!'}
           </div>
-        )}
-        {requestStatus === 'loading' && (
+        ) : requestStatus === 'loading' ? (
           <div className="mt-2 p-2 rounded-xl bg-blue-500/20 border border-blue-500/30 text-blue-400 flex items-center gap-2">
             Processing scan...
+          </div>
+        ) : (
+          <div className="mt-2 p-2 rounded-xl bg-white/10 border border-white/20 text-white/70 flex items-center gap-2">
+            Awaiting scan result...
           </div>
         )}
         {showRetry && requestStatus === 'error' && (
